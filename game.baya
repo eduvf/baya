@@ -1,0 +1,11 @@
+( comment )
+x = 1
+y = 1
+
+loop
+  if y > 5 then break
+  x *= y
+  y += 1
+again
+
+print x
