@@ -1,2 +1,1 @@
-# baya
-🫐 A fantasy console
+# 🫐 baya fantasy console
