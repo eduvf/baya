@@ -91,7 +91,16 @@ void parse_print() {
   return;
 }
 
-void parse_loop() {}
+void parse_loop() {
+  puts("loop start...");
+  return;
+}
+
+void parse_again() {
+  puts("...end loop");
+  return;
+}
+
 void parse_if() {}
 
 void parse() {
@@ -100,6 +109,10 @@ void parse() {
       parse_assign();
     else if (strcmp(t, "print") == 0)
       parse_print();
+    else if (strcmp(t, "loop") == 0)
+      parse_loop();
+    else if (strcmp(t, "again") == 0)
+      parse_again();
   }
 }
 
