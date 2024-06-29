@@ -33,6 +33,12 @@ char isop() {
   return 0;
 }
 
+char iscmp() {
+  if (strcmp(t, "==") == 0) return '=';
+  if (strcmp(t, "!=") == 0) return '!';
+  return 0;
+}
+
 char *scan() {
   char c;
   size_t i = 0;
@@ -101,7 +107,35 @@ void parse_again() {
   return;
 }
 
-void parse_if() {}
+void parse_break() {
+  puts("! break out of loop");
+  return;
+}
+
+void parse_if() {
+  char reg;
+  char cmp;
+  long num;
+  char other_reg;
+
+  next();
+  if (!(reg = isreg())) exit(1);
+
+  next();
+  if (!(cmp = iscmp())) exit(1);
+
+  next();
+  if ((other_reg = isreg())) {
+    printf("if r%c %c= r%c skip next\n", reg, cmp, other_reg);
+  } else {
+    if (isnum(&num) != 0) exit(1);
+    printf("if r%c %c= 0x%lx skip next\n", reg, cmp, num);
+  }
+
+  next();
+  if (strcmp(t, "then") != 0) exit(1);
+  return;
+}
 
 void parse() {
   while (scan() != NULL) {
@@ -113,6 +147,10 @@ void parse() {
       parse_loop();
     else if (strcmp(t, "again") == 0)
       parse_again();
+    else if (strcmp(t, "break") == 0)
+      parse_break();
+    else if (strcmp(t, "if") == 0)
+      parse_if();
   }
 }
 
