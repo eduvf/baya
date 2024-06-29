@@ -42,19 +42,19 @@ char *scan() {
     comment = (comment || c == '(') && c != ')';
     if (comment || c == ')') continue;
 
-    if (isgraph(c) && i < (TOK_LEN - 1))
+    if (isgraph(c) && i < (TOK_LEN - 1)) {
       t[i++] = c;
-    else {
-      t[i++] = '\0';
-      if (t[0] != '\0') return t;
-      i = 0;
+    } else {
+      if (i == 0) continue;
+      t[i] = '\0';
+      return t;
     }
   }
   return NULL;
 }
 
-char *next() {
-  if (scan() != NULL) return t;
+void next() {
+  if (scan() != NULL) return;
   exit(1);
 }
 
