@@ -81,13 +81,25 @@ void parse_assign() {
   return;
 }
 
-void parse_print() {}
+void parse_print() {
+  char reg;
+
+  next();
+  if (!(reg = isreg())) exit(1);
+
+  printf("print value of r%c\n", reg);
+  return;
+}
+
 void parse_loop() {}
 void parse_if() {}
 
 void parse() {
   while (scan() != NULL) {
-    if (isreg()) parse_assign();
+    if (isreg())
+      parse_assign();
+    else if (strcmp(t, "print "))
+      parse_print();
   }
 }
 
