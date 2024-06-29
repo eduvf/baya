@@ -98,7 +98,7 @@ void parse() {
   while (scan() != NULL) {
     if (isreg())
       parse_assign();
-    else if (strcmp(t, "print "))
+    else if (strcmp(t, "print") == 0)
       parse_print();
   }
 }
