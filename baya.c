@@ -3,7 +3,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-char *scan(FILE *f, char t[16]) {
+#define TOK_LEN 16
+
+FILE *f;
+char t[TOK_LEN];
+
+char *scan() {
   char c;
   size_t i = 0;
   bool comment = false;
@@ -12,7 +17,7 @@ char *scan(FILE *f, char t[16]) {
     comment = (comment || c == '(') && c != ')';
     if (comment || c == ')') continue;
 
-    if (isgraph(c) && i < 15)
+    if (isgraph(c) && i < (TOK_LEN - 1))
       t[i++] = c;
     else {
       t[i++] = '\0';
@@ -23,21 +28,17 @@ char *scan(FILE *f, char t[16]) {
   return NULL;
 }
 
-void parse(FILE *f) {
-  char *t;
-
-  while ((t = scan(f, t)) != NULL) {
+void parse() {
+  while (scan() != NULL) {
     printf("%s\n", t);
   }
 }
 
 void read(char *name) {
-  FILE *f;
-
   f = fopen(name, "r");
   if (f == NULL) exit(1);
 
-  parse(f);
+  parse();
 
   fclose(f);
 }
