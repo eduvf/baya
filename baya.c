@@ -83,8 +83,9 @@ void parse_assign() {
 
   if (op != '=' && op != '+') exit(1);
   if (isnum(&num) != 0) exit(1);
+  if (num > 0xff) exit(1);
 
-  // printf("r%c op %c with 0x%lx\n", reg, op, num);
+  // printf("r%c op %c with 0x%x\n", reg, op, num);
   printf("%c%c%02lx ", op, reg, num);
   return;
 }
@@ -136,7 +137,9 @@ void parse_if() {
     printf("?%c%c%c ", cmp, reg, other_reg);
   } else {
     if (isnum(&num) != 0) exit(1);
-    // printf("if r%c %c= 0x%lx skip next\n", reg, cmp, num);
+    if (num > 0xf) exit(1);
+
+    // printf("if r%c %c= 0x%x skip next\n", reg, cmp, num);
     printf("?%c%c%lx ", cmp, reg, num);
   }
 
