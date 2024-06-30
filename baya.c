@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +30,15 @@ void write4(char a, char b, char c, char d) {
   mem[p++] = c;
   mem[p++] = d;
   mem[p++] = ' ';
+}
+
+char numhex(uint8_t n) {
+  // 0x30: '0', 0x31: '1', ..., 0x61: 'a', ...
+  return (0 <= n && n <= 9) ? (n + 0x30) : (n + 0x61);
+}
+
+uint8_t hexnum(char c) {
+  return ('0' <= c && c <= '9') ? (c - 0x30) : (c - 0x61);
 }
 
 int isnum(long *num) {
@@ -109,7 +119,7 @@ void parse_assign() {
 
   // printf("r%c op %c with 0x%x\n", reg, op, num);
   // printf("%c%c%02lx ", op, reg, num);
-  write4(op, reg, 0x30 + (num >> 4), 0x30 + (num & 0xf));
+  write4(op, reg, numhex(num >> 4), numhex(num & 0xf));
   return;
 }
 
@@ -193,6 +203,7 @@ void parse() {
       parse_if();
   }
 
+  write1('.');
   write1('\0');
   puts(mem);
 }
