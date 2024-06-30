@@ -217,8 +217,39 @@ void read(char *name) {
   fclose(f);
 }
 
+int regnum(char r) {
+  if (r == 'x') return 0;
+  if (r == 'y') return 1;
+  if (r == 'z') return 2;
+  if (r == 'w') return 3;
+}
+
+void exec() {
+  uint16_t i = 0;
+  uint8_t r[4];
+
+  char a, b, c;
+
+  while (1) {
+    switch (mem[i++]) {
+    case '=':
+      a = mem[i++], b = mem[i++], c = mem[i++];
+      r[regnum(a)] = (hexnum(b) << 4) | (hexnum(c) & 0xf);
+      break;
+    case '!':
+      printf("%d\n", r[regnum(mem[i++])]);
+      break;
+    case '.':
+      return;
+    default:
+      break;
+    }
+  }
+}
+
 int main(void) {
   read("game.baya");
+  exec();
 
   return 0;
 }
