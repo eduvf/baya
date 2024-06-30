@@ -9,6 +9,27 @@
 
 FILE *f;
 char t[TOK_LEN];
+char mem[(1 << 12)];
+int p = 0;
+
+void write1(char a) {
+  mem[p++] = a;
+  mem[p++] = ' ';
+}
+
+void write2(char a, char b) {
+  mem[p++] = a;
+  mem[p++] = b;
+  mem[p++] = ' ';
+}
+
+void write4(char a, char b, char c, char d) {
+  mem[p++] = a;
+  mem[p++] = b;
+  mem[p++] = c;
+  mem[p++] = d;
+  mem[p++] = ' ';
+}
 
 int isnum(long *num) {
   *num = strtol(t, NULL, 0);
@@ -78,6 +99,7 @@ void parse_assign() {
   if ((from_reg = isreg())) {
     // printf("r%c op %c with r%c\n", reg, op, from_reg);
     printf(":%c%c%c ", op, reg, from_reg);
+    write4(':', op, reg, from_reg);
     return;
   }
 
@@ -87,6 +109,7 @@ void parse_assign() {
 
   // printf("r%c op %c with 0x%x\n", reg, op, num);
   printf("%c%c%02lx ", op, reg, num);
+  write4(op, reg, 0x30 + (num >> 4), 0x30 + (num & 0xf));
   return;
 }
 
@@ -98,24 +121,28 @@ void parse_print() {
 
   // printf("print value of r%c\n", reg);
   printf("!%c ", reg);
+  write2('!', reg);
   return;
 }
 
 void parse_loop() {
   // puts("loop start...");
   printf("[ ");
+  write1('[');
   return;
 }
 
 void parse_again() {
   // puts("...end loop");
   printf("] ");
+  write1(']');
   return;
 }
 
 void parse_break() {
   // puts("! break out of loop");
   printf("^ ");
+  write1('^');
   return;
 }
 
@@ -135,12 +162,14 @@ void parse_if() {
   if ((other_reg = isreg())) {
     // printf("if r%c %c= r%c skip next\n", reg, cmp, other_reg);
     printf("?%c%c%c ", cmp, reg, other_reg);
+    write4('?', cmp, reg, other_reg);
   } else {
     if (isnum(&num) != 0) exit(1);
     if (num > 0xf) exit(1);
 
     // printf("if r%c %c= 0x%x skip next\n", reg, cmp, num);
     printf("?%c%c%lx ", cmp, reg, num);
+    write4('?', cmp, reg, 0x30 + num);
   }
 
   next();
@@ -164,6 +193,9 @@ void parse() {
       parse_if();
   }
   puts("");
+
+  write1('\0');
+  puts(mem);
 }
 
 void read(char *name) {
