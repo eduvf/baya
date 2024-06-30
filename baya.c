@@ -98,7 +98,7 @@ void parse_assign() {
   next();
   if ((from_reg = isreg())) {
     // printf("r%c op %c with r%c\n", reg, op, from_reg);
-    printf(":%c%c%c ", op, reg, from_reg);
+    // printf(":%c%c%c ", op, reg, from_reg);
     write4(':', op, reg, from_reg);
     return;
   }
@@ -108,7 +108,7 @@ void parse_assign() {
   if (num > 0xff) exit(1);
 
   // printf("r%c op %c with 0x%x\n", reg, op, num);
-  printf("%c%c%02lx ", op, reg, num);
+  // printf("%c%c%02lx ", op, reg, num);
   write4(op, reg, 0x30 + (num >> 4), 0x30 + (num & 0xf));
   return;
 }
@@ -120,28 +120,28 @@ void parse_print() {
   if (!(reg = isreg())) exit(1);
 
   // printf("print value of r%c\n", reg);
-  printf("!%c ", reg);
+  // printf("!%c ", reg);
   write2('!', reg);
   return;
 }
 
 void parse_loop() {
   // puts("loop start...");
-  printf("[ ");
+  // printf("[ ");
   write1('[');
   return;
 }
 
 void parse_again() {
   // puts("...end loop");
-  printf("] ");
+  // printf("] ");
   write1(']');
   return;
 }
 
 void parse_break() {
   // puts("! break out of loop");
-  printf("^ ");
+  // printf("^ ");
   write1('^');
   return;
 }
@@ -161,14 +161,14 @@ void parse_if() {
   next();
   if ((other_reg = isreg())) {
     // printf("if r%c %c= r%c skip next\n", reg, cmp, other_reg);
-    printf("?%c%c%c ", cmp, reg, other_reg);
+    // printf("?%c%c%c ", cmp, reg, other_reg);
     write4('?', cmp, reg, other_reg);
   } else {
     if (isnum(&num) != 0) exit(1);
     if (num > 0xf) exit(1);
 
     // printf("if r%c %c= 0x%x skip next\n", reg, cmp, num);
-    printf("?%c%c%lx ", cmp, reg, num);
+    // printf("?%c%c%lx ", cmp, reg, num);
     write4('?', cmp, reg, 0x30 + num);
   }
 
@@ -192,7 +192,6 @@ void parse() {
     else if (strcmp(t, "if") == 0)
       parse_if();
   }
-  puts("");
 
   write1('\0');
   puts(mem);
