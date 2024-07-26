@@ -19,6 +19,11 @@ char off[LBL_NUM];
 char mem[(1 << 12)];
 char p = 0;
 
+char hex(int n) {
+  if (n > 0xf) exit(1);
+  return n + ((0 <= n && n <= 9) ? 0x30 : 0x61);
+}
+
 void write(char a, char b, char c, char d) {
   mem[p++] = a;
   mem[p++] = b;
@@ -26,9 +31,23 @@ void write(char a, char b, char c, char d) {
   mem[p++] = d;
 }
 
-char hex(int n) {
-  if (n > 0xf) exit(1);
-  return n + ((0 <= n && n <= 9) ? 0x30 : 0x61);
+void write2(char a, char b) {
+  mem[p++] = a;
+  mem[p++] = b;
+}
+
+void writeNN(char a, char b, int n) {
+  mem[p++] = a;
+  mem[p++] = b;
+  mem[p++] = hex((n & 0xf0) >> 4);
+  mem[p++] = hex((n & 0xf));
+}
+
+void writeNNN(char a, int n) {
+  mem[p++] = a;
+  mem[p++] = hex((n & 0xf00) >> 8);
+  mem[p++] = hex((n & 0xf0) >> 4);
+  mem[p++] = hex((n & 0xf));
 }
 
 char isnum(char *num) {
@@ -105,7 +124,7 @@ void parse_assign() {
   if (!(op == '=' || op == '+')) exit(1);
   if (isnum(&num) != 0) exit(1);
 
-  write(op, reg, hex((num & 0xf0) >> 4), hex(num & 0xf));
+  writeNN(op, reg, num);
   return;
 }
 
@@ -142,7 +161,7 @@ void parse_print() {
   next();
   if (!(reg = isreg())) exit(1);
 
-  write('p', reg, '.', '.');
+  write2('p', reg);
   return;
 }
 
@@ -150,13 +169,31 @@ void parse_label() {
   next();
   if (lbl_n == LBL_NUM) exit(1);
 
+  for (int i = 0; i < lbl_n; i++) {
+    if (strcmp(t, lbl[i]) == 0) {
+      off[i] = p;
+      return;
+    }
+  }
   strcpy(lbl[lbl_n], t);
-  off[lbl_n++] = p;
+  off[lbl_n] = p;
+  lbl_n++;
 }
 
 void parse_goto() {
   next();
-  write('g', '.', '.', '.');
+  if (lbl_n == LBL_NUM) exit(1);
+
+  for (int i = 0; i < lbl_n; i++) {
+    if (strcmp(t, lbl[i]) == 0) {
+      writeNNN('g', i);
+      return;
+    }
+  }
+  strcpy(lbl[lbl_n], t);
+  off[lbl_n] = 0;
+  writeNNN('g', lbl_n);
+  lbl_n++;
 }
 
 void read(char *name) {
@@ -184,13 +221,14 @@ void read(char *name) {
 int main(void) {
   read("game.baya");
 
-  for (int i; i < p; i += 4) {
-    printf("%c%c%c%c\n", mem[i], mem[i + 1], mem[i + 2], mem[i + 3]);
+  for (int i; i < p; i++) {
+    printf("%c", mem[i]);
   }
+  puts("");
 
   puts("----");
   for (int i = 0; i < lbl_n; i++) {
-    printf("%s: 0x%x\n", lbl[i], off[i]);
+    printf("%02x: 0x%x\n", i, off[i]);
   }
 
   return 0;
