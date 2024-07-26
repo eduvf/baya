@@ -11,6 +11,7 @@
 FILE *f;
 char t[TOK_LEN];
 char mem[(1 << 12)];
+char ins = 0;
 
 char isnum(char *num) {
   *num = (char)strtol(t, NULL, 0);
@@ -79,14 +80,14 @@ void parse_assign() {
 
   next();
   if ((from_reg = isreg())) {
-    printf("r%c %c r%c\n", reg, op, from_reg);
+    printf("%02x  r%c %c r%c\n", ins++, reg, op, from_reg);
     return;
   }
 
   if (!(op == '=' || op == '+')) exit(1);
   if (isnum(&num) != 0) exit(1);
 
-  printf("r%c %c 0x%x\n", reg, op, num);
+  printf("%02x  r%c %c 0x%x\n", ins++, reg, op, num);
   return;
 }
 
@@ -104,12 +105,12 @@ void parse_if() {
 
   next();
   if ((other_reg = isreg())) {
-    printf("if r%c %c= r%c then\n", reg, cmp, other_reg);
+    printf("%02x  if r%c %c= r%c then\n", ins++, reg, cmp, other_reg);
   } else {
     if (isnum(&num) != 0) exit(1);
     if (num > 0xf) exit(1);
 
-    printf("if r%c %c= 0x%x\n", reg, cmp, num);
+    printf("%02x  if r%c %c= 0x%x\n", ins++, reg, cmp, num);
   }
 
   next();
@@ -123,13 +124,19 @@ void parse_print() {
   next();
   if (!(reg = isreg())) exit(1);
 
-  printf("print r%c\n", reg);
+  printf("%02x  print r%c\n", ins++, reg);
   return;
 }
 
-void parse_label() { next(); }
+void parse_label() {
+  next();
+  printf("(label %s)\n", t);
+}
 
-void parse_goto() { next(); }
+void parse_goto() {
+  next();
+  printf("%02x  goto %s\n", ins++, t);
+}
 
 void read(char *name) {
   f = fopen(name, "r");
