@@ -11,3 +11,12 @@ z = 5
 print x
 print y
 print z
+
+goto abc
+goto abc
+: def
+goto end
+goto end
+: abc
+goto def
+: end

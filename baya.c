@@ -7,9 +7,13 @@
 #include <string.h>
 
 #define TOK_LEN 16
+#define LBL_NUM 64
 
 FILE *f;
 char t[TOK_LEN];
+char lbl_n = 0;
+char lbl[LBL_NUM][TOK_LEN];
+char off[LBL_NUM];
 char mem[(1 << 12)];
 char ins = 0;
 
@@ -130,7 +134,10 @@ void parse_print() {
 
 void parse_label() {
   next();
-  printf("(label %s)\n", t);
+  if (lbl_n == LBL_NUM) exit(1);
+
+  strcpy(lbl[lbl_n], t);
+  off[lbl_n++] = ins;
 }
 
 void parse_goto() {
@@ -162,6 +169,11 @@ void read(char *name) {
 
 int main(void) {
   read("game.baya");
+
+  puts("--------");
+  for (int i = 0; i < lbl_n; i++) {
+    printf("%s: 0x%x\n", lbl[i], off[i]);
+  }
 
   return 0;
 }
