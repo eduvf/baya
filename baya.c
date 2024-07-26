@@ -21,7 +21,7 @@ char p = 0;
 
 char hex(int n) {
   if (n > 0xf) exit(1);
-  return n + ((0 <= n && n <= 9) ? 0x30 : 0x61);
+  return n + ((0 <= n && n <= 9) ? 0x30 : 0x57);
 }
 
 void write(char a, char b, char c, char d) {
@@ -196,6 +196,23 @@ void parse_goto() {
   lbl_n++;
 }
 
+void resolve_gotos() {
+  char buf[3];
+  int n;
+
+  for (int i = 0; i < p; i += 2) {
+    if (mem[i] == 'g') {
+      buf[0] = mem[i + 1];
+      buf[1] = mem[i + 2];
+      buf[2] = mem[i + 3];
+      n = off[atoi(buf)];
+      mem[i + 1] = hex((n & 0xf00) >> 8);
+      mem[i + 2] = hex((n & 0xf0) >> 4);
+      mem[i + 3] = hex((n & 0xf));
+    }
+  }
+}
+
 void read(char *name) {
   f = fopen(name, "r");
   if (f == NULL) exit(1);
@@ -215,6 +232,8 @@ void read(char *name) {
       exit(1);
   }
 
+  resolve_gotos();
+
   fclose(f);
 }
 
@@ -226,10 +245,10 @@ int main(void) {
   }
   puts("");
 
-  puts("----");
-  for (int i = 0; i < lbl_n; i++) {
-    printf("%02x: 0x%x\n", i, off[i]);
-  }
+  // puts("----");
+  // for (int i = 0; i < lbl_n; i++) {
+  //   printf("%02x: 0x%x\n", i, off[i]);
+  // }
 
   return 0;
 }
