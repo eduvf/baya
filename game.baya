@@ -3,13 +3,10 @@ x = 1
 y = 1
 z = 5
 
-(
-loop
+: loop
   x *= y
   y += 1
-  if y == z then break
-again
-)
+  if y != z then goto loop
 
 print x
 print y
