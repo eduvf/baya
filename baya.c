@@ -12,8 +12,8 @@ FILE *f;
 char t[TOK_LEN];
 char mem[(1 << 12)];
 
-char isnum(long *num) {
-  *num = strtol(t, NULL, 0);
+char isnum(char *num) {
+  *num = (char)strtol(t, NULL, 0);
   return errno;
 }
 
@@ -70,7 +70,7 @@ void next() {
 void parse_assign() {
   char reg;
   char op;
-  long num;
+  char num;
   char from_reg;
 
   reg = isreg();
@@ -85,16 +85,15 @@ void parse_assign() {
 
   if (!(op == '=' || op == '+')) exit(1);
   if (isnum(&num) != 0) exit(1);
-  if (num > 0xff) exit(1);
 
-  printf("r%c %c 0x%x\n", reg, op, (int)num);
+  printf("r%c %c 0x%x\n", reg, op, num);
   return;
 }
 
 void parse_if() {
   char reg;
   char cmp;
-  long num;
+  char num;
   char other_reg;
 
   next();
@@ -110,7 +109,7 @@ void parse_if() {
     if (isnum(&num) != 0) exit(1);
     if (num > 0xf) exit(1);
 
-    printf("if r%c %c= 0x%x\n", reg, cmp, (int)num);
+    printf("if r%c %c= 0x%x\n", reg, cmp, num);
   }
 
   next();
