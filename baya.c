@@ -11,11 +11,25 @@
 
 FILE *f;
 char t[TOK_LEN];
+
 char lbl_n = 0;
 char lbl[LBL_NUM][TOK_LEN];
 char off[LBL_NUM];
+
 char mem[(1 << 12)];
-char ins = 0;
+char p = 0;
+
+void write(char a, char b, char c, char d) {
+  mem[p++] = a;
+  mem[p++] = b;
+  mem[p++] = c;
+  mem[p++] = d;
+}
+
+char hex(int n) {
+  if (n > 0xf) exit(1);
+  return n + ((0 <= n && n <= 9) ? 0x30 : 0x61);
+}
 
 char isnum(char *num) {
   *num = (char)strtol(t, NULL, 0);
@@ -84,14 +98,14 @@ void parse_assign() {
 
   next();
   if ((from_reg = isreg())) {
-    printf("%02x  r%c %c r%c\n", ins++, reg, op, from_reg);
+    write(':', reg, op, from_reg);
     return;
   }
 
   if (!(op == '=' || op == '+')) exit(1);
   if (isnum(&num) != 0) exit(1);
 
-  printf("%02x  r%c %c 0x%x\n", ins++, reg, op, num);
+  write(op, reg, hex((num & 0xf0) >> 4), hex(num & 0xf));
   return;
 }
 
@@ -109,12 +123,12 @@ void parse_if() {
 
   next();
   if ((other_reg = isreg())) {
-    printf("%02x  if r%c %c= r%c then\n", ins++, reg, cmp, other_reg);
+    write('?', reg, cmp, other_reg);
   } else {
     if (isnum(&num) != 0) exit(1);
     if (num > 0xf) exit(1);
 
-    printf("%02x  if r%c %c= 0x%x\n", ins++, reg, cmp, num);
+    write('?', reg, cmp, hex(num));
   }
 
   next();
@@ -128,7 +142,7 @@ void parse_print() {
   next();
   if (!(reg = isreg())) exit(1);
 
-  printf("%02x  print r%c\n", ins++, reg);
+  write('p', reg, '.', '.');
   return;
 }
 
@@ -137,12 +151,12 @@ void parse_label() {
   if (lbl_n == LBL_NUM) exit(1);
 
   strcpy(lbl[lbl_n], t);
-  off[lbl_n++] = ins;
+  off[lbl_n++] = p;
 }
 
 void parse_goto() {
   next();
-  printf("%02x  goto %s\n", ins++, t);
+  write('g', '.', '.', '.');
 }
 
 void read(char *name) {
@@ -170,7 +184,11 @@ void read(char *name) {
 int main(void) {
   read("game.baya");
 
-  puts("--------");
+  for (int i; i < p; i += 4) {
+    printf("%c%c%c%c\n", mem[i], mem[i + 1], mem[i + 2], mem[i + 3]);
+  }
+
+  puts("----");
   for (int i = 0; i < lbl_n; i++) {
     printf("%s: 0x%x\n", lbl[i], off[i]);
   }
