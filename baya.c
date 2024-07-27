@@ -19,6 +19,7 @@
  * ?oxN    if x o N then
  * gNNN    goto NNN
  * px      print x
+ * .       halt
  *
  */
 
@@ -244,6 +245,7 @@ void read(char *name) {
     else
       exit(1);
   }
+  write2('.', ' ');
 
   resolve_gotos();
 
