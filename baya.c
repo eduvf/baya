@@ -9,6 +9,19 @@
 #define TOK_LEN 16
 #define LBL_NUM 64
 
+/*
+ * INSTRUCTIONS
+ *
+ * =xNN    x = NN
+ * +xNN    x += NN
+ * :oxy    x o= y
+ * ?oxy    if x o y then
+ * ?oxN    if x o N then
+ * gNNN    goto NNN
+ * px      print x
+ *
+ */
+
 FILE *f;
 char t[TOK_LEN];
 
@@ -117,7 +130,7 @@ void parse_assign() {
 
   next();
   if ((from_reg = isreg())) {
-    write(':', reg, op, from_reg);
+    write(':', op, reg, from_reg);
     return;
   }
 
@@ -142,12 +155,12 @@ void parse_if() {
 
   next();
   if ((other_reg = isreg())) {
-    write('?', reg, cmp, other_reg);
+    write('?', cmp, reg, other_reg);
   } else {
     if (isnum(&num) != 0) exit(1);
     if (num > 0xf) exit(1);
 
-    write('?', reg, cmp, hex(num));
+    write('?', cmp, reg, hex(num));
   }
 
   next();
@@ -243,12 +256,7 @@ int main(void) {
   for (int i; i < p; i++) {
     printf("%c", mem[i]);
   }
-  puts("");
-
-  // puts("----");
-  // for (int i = 0; i < lbl_n; i++) {
-  //   printf("%02x: 0x%x\n", i, off[i]);
-  // }
+  putchar('\n');
 
   return 0;
 }
