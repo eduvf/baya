@@ -33,10 +33,9 @@ char off[LBL_NUM];
 char mem[(1 << 12)];
 char p = 0;
 
-char hex(int n) {
-  if (n > 0xf) exit(1);
-  return n + ((0 <= n && n <= 9) ? 0x30 : 0x57);
-}
+char hex(int n) { return n + ((n <= 9) ? '0' : 'A' - 10); }
+
+int ord(char c) { return (c <= '9') ? c - '0' : (c & 0x7) + 9; }
 
 void write(char a, char b, char c, char d) {
   mem[p++] = a;
@@ -252,6 +251,62 @@ void read(char *name) {
   fclose(f);
 }
 
+int getreg() {
+  char c = mem[p++];
+  switch (c) {
+  case 'x':
+    return 0;
+  case 'y':
+    return 1;
+  case 'z':
+    return 2;
+  case 'w':
+    return 3;
+  }
+}
+
+int getNN() {
+  char a = mem[p++];
+  char b = mem[p++];
+  return ord(a) * 0x10 + ord(b);
+}
+
+int getNNN() {
+  char a = mem[p++];
+  char b = mem[p++];
+  char c = mem[p++];
+  return ord(a) * 0x100 + ord(b) * 0x10 + ord(c);
+}
+
+void exec() {
+  char o;
+  int r[4];
+  p = 0;
+
+  while ((o = mem[p++]) != '.') {
+    switch (o) {
+    case '=':
+      r[getreg()] = getNN();
+      break;
+    case '+':
+      r[getreg()] += getNN();
+      break;
+    case ':':
+      p += 3;
+      break;
+    case '?':
+      p += 3;
+      break;
+    case 'g':
+      p += 3;
+      break;
+    case 'p':
+      printf("%d\n", r[getreg()]);
+      break;
+    }
+  }
+}
+
 int main(void) {
   read("game.baya");
 
@@ -259,6 +314,8 @@ int main(void) {
     printf("%c", mem[i]);
   }
   putchar('\n');
+
+  exec();
 
   return 0;
 }
