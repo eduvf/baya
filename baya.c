@@ -6,249 +6,340 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define TOK_LEN 16
+#define TOKEN_LENGTH 16
+#define LABEL_MAX 64
 
-FILE *f;
-char t[TOK_LEN];
-char mem[(1 << 12)];
-int p = 0;
+/*
+ * INSTRUCTIONS
+ *
+ * =xNN    x = NN
+ * +xNN    x += NN
+ * :oxy    x o= y
+ * ?oxy    if x o y then
+ * gNNN    goto NNN
+ * px      print x
+ * .       halt
+ *
+ */
 
-void write1(char a) {
-  mem[p++] = a;
-  mem[p++] = ' ';
+FILE *file;
+char token[TOKEN_LENGTH];
+
+char label_n = 0;
+char label[LABEL_MAX][TOKEN_LENGTH];
+char label_offset[LABEL_MAX];
+
+char memory[(1 << 12)];
+char pc = 0;
+
+char hex(int n) { return n + ((n <= 9) ? '0' : 'A' - 10); }
+
+int ord(char c) { return (c <= '9') ? c - '0' : (c & 0x7) + 9; }
+
+void write(char a, char b, char c, char d) {
+  memory[pc++] = a;
+  memory[pc++] = b;
+  memory[pc++] = c;
+  memory[pc++] = d;
 }
 
-void write2(char a, char b) {
-  mem[p++] = a;
-  mem[p++] = b;
-  mem[p++] = ' ';
+void writeNN(char a, char b, int n) {
+  memory[pc++] = a;
+  memory[pc++] = b;
+  memory[pc++] = hex((n & 0xf0) >> 4);
+  memory[pc++] = hex((n & 0xf));
 }
 
-void write4(char a, char b, char c, char d) {
-  mem[p++] = a;
-  mem[p++] = b;
-  mem[p++] = c;
-  mem[p++] = d;
-  mem[p++] = ' ';
+void writeNNN(char a, int n) {
+  memory[pc++] = a;
+  memory[pc++] = hex((n & 0xf00) >> 8);
+  memory[pc++] = hex((n & 0xf0) >> 4);
+  memory[pc++] = hex((n & 0xf));
 }
 
-char numhex(uint8_t n) {
-  // 0x30: '0', 0x31: '1', ..., 0x61: 'a', ...
-  return (0 <= n && n <= 9) ? (n + 0x30) : (n + 0x61);
-}
-
-uint8_t hexnum(char c) {
-  return ('0' <= c && c <= '9') ? (c - 0x30) : (c - 0x61);
-}
-
-int isnum(long *num) {
-  *num = strtol(t, NULL, 0);
+char is_number(char *n) {
+  *n = (char)strtol(token, NULL, 0);
   return errno;
 }
 
-char isreg() {
-  if (strcmp(t, "x") == 0) return 'x';
-  if (strcmp(t, "y") == 0) return 'y';
-  if (strcmp(t, "z") == 0) return 'z';
-  if (strcmp(t, "w") == 0) return 'w';
+char is_register() {
+  if (strcmp(token, "x") == 0) return 'x';
+  if (strcmp(token, "y") == 0) return 'y';
+  if (strcmp(token, "z") == 0) return 'z';
+  if (strcmp(token, "w") == 0) return 'w';
   return 0;
 }
 
-char isop() {
-  if (strcmp(t, "=") == 0) return '=';
-  if (strcmp(t, "+=") == 0) return '+';
-  if (strcmp(t, "-=") == 0) return '-';
-  if (strcmp(t, "*=") == 0) return '*';
-  if (strcmp(t, "/=") == 0) return '/';
-  if (strcmp(t, "%=") == 0) return '%';
+char is_operator() {
+  if (strcmp(token, "=") == 0) return '=';
+  if (strcmp(token, "+=") == 0) return '+';
+  if (strcmp(token, "-=") == 0) return '-';
+  if (strcmp(token, "*=") == 0) return '*';
+  if (strcmp(token, "/=") == 0) return '/';
+  if (strcmp(token, "%=") == 0) return '%';
   return 0;
 }
 
-char iscmp() {
-  if (strcmp(t, "==") == 0) return '=';
-  if (strcmp(t, "!=") == 0) return '!';
+char is_compare() {
+  if (strcmp(token, "==") == 0) return '=';
+  if (strcmp(token, "!=") == 0) return '!';
   return 0;
 }
 
-char *scan() {
+char *scan_token() {
   char c;
-  size_t i = 0;
+  char i = 0;
   bool comment = false;
 
-  while ((c = fgetc(f)) != EOF) {
-    comment = (comment || c == '(') && c != ')';
+  while ((c = fgetc(file)) != EOF) {
+    comment = comment && c != ')' || c == '(';
     if (comment || c == ')') continue;
 
-    if (isgraph(c) && i < (TOK_LEN - 1)) {
-      t[i++] = c;
-    } else {
-      if (i == 0) continue;
-      t[i] = '\0';
-      return t;
+    if (isgraph(c) && i < (TOKEN_LENGTH - 1)) {
+      token[i++] = c;
+      continue;
     }
+
+    if (i == 0) continue;
+    token[i] = '\0';
+    return token;
   }
   return NULL;
 }
 
-void next() {
-  if (scan() != NULL) return;
+void next_token() {
+  if (scan_token() != NULL) return;
   exit(1);
 }
 
 void parse_assign() {
-  char reg;
+  char reg_to;
+  char reg_from;
   char op;
-  long num;
-  char from_reg;
+  char num;
 
-  reg = isreg();
-  next();
-  if (!(op = isop())) exit(1);
+  reg_to = is_register();
+  next_token();
+  if (!(op = is_operator())) exit(1);
 
-  next();
-  if ((from_reg = isreg())) {
-    // printf("r%c op %c with r%c\n", reg, op, from_reg);
-    // printf(":%c%c%c ", op, reg, from_reg);
-    write4(':', op, reg, from_reg);
+  next_token();
+  if ((reg_from = is_register())) {
+    write(':', op, reg_to, reg_from);
     return;
   }
 
-  if (op != '=' && op != '+') exit(1);
-  if (isnum(&num) != 0) exit(1);
-  if (num > 0xff) exit(1);
+  if (!(op == '=' || op == '+')) exit(1);
+  if (is_number(&num) != 0) exit(1);
 
-  // printf("r%c op %c with 0x%x\n", reg, op, num);
-  // printf("%c%c%02lx ", op, reg, num);
-  write4(op, reg, numhex(num >> 4), numhex(num & 0xf));
+  writeNN(op, reg_to, num);
+  return;
+}
+
+void parse_if() {
+  char reg_lhs;
+  char reg_rhs;
+  char cmp;
+  char num;
+
+  next_token();
+  if (!(reg_lhs = is_register())) exit(1);
+
+  next_token();
+  if (!(cmp = is_compare())) exit(1);
+
+  next_token();
+  if ((reg_rhs = is_register())) {
+    write('?', cmp, reg_lhs, reg_rhs);
+  } else {
+    exit(1);
+  }
+
+  /* else {
+    if (isnum(&num) != 0) exit(1);
+    if (num > 0xf) exit(1);
+
+    write('?', cmp, reg, hex(num));
+  } */
+
+  next_token();
+  if (strcmp(token, "then") != 0) exit(1);
   return;
 }
 
 void parse_print() {
   char reg;
 
-  next();
-  if (!(reg = isreg())) exit(1);
+  next_token();
+  if (!(reg = is_register())) exit(1);
 
-  // printf("print value of r%c\n", reg);
-  // printf("!%c ", reg);
-  write2('!', reg);
+  write('p', reg, '_', '_');
   return;
 }
 
-void parse_loop() {
-  // puts("loop start...");
-  // printf("[ ");
-  write1('[');
-  return;
-}
+void parse_label() {
+  next_token();
+  if (label_n == LABEL_MAX) exit(1);
 
-void parse_again() {
-  // puts("...end loop");
-  // printf("] ");
-  write1(']');
-  return;
-}
-
-void parse_break() {
-  // puts("! break out of loop");
-  // printf("^ ");
-  write1('^');
-  return;
-}
-
-void parse_if() {
-  char reg;
-  char cmp;
-  long num;
-  char other_reg;
-
-  next();
-  if (!(reg = isreg())) exit(1);
-
-  next();
-  if (!(cmp = iscmp())) exit(1);
-
-  next();
-  if ((other_reg = isreg())) {
-    // printf("if r%c %c= r%c skip next\n", reg, cmp, other_reg);
-    // printf("?%c%c%c ", cmp, reg, other_reg);
-    write4('?', cmp, reg, other_reg);
-  } else {
-    if (isnum(&num) != 0) exit(1);
-    if (num > 0xf) exit(1);
-
-    // printf("if r%c %c= 0x%x skip next\n", reg, cmp, num);
-    // printf("?%c%c%lx ", cmp, reg, num);
-    write4('?', cmp, reg, 0x30 + num);
+  for (int i = 0; i < label_n; i++) {
+    if (strcmp(token, label[i]) == 0) {
+      label_offset[i] = pc;
+      return;
+    }
   }
 
-  next();
-  if (strcmp(t, "then") != 0) exit(1);
-  return;
+  strcpy(label[label_n], token);
+  label_offset[label_n] = pc;
+  label_n++;
 }
 
-void parse() {
-  while (scan() != NULL) {
-    if (isreg())
-      parse_assign();
-    else if (strcmp(t, "print") == 0)
-      parse_print();
-    else if (strcmp(t, "loop") == 0)
-      parse_loop();
-    else if (strcmp(t, "again") == 0)
-      parse_again();
-    else if (strcmp(t, "break") == 0)
-      parse_break();
-    else if (strcmp(t, "if") == 0)
-      parse_if();
+void parse_goto() {
+  next_token();
+  if (label_n == LABEL_MAX) exit(1);
+
+  for (int i = 0; i < label_n; i++) {
+    if (strcmp(token, label[i]) == 0) {
+      writeNNN('g', i);
+      return;
+    }
   }
 
-  write1('.');
-  write1('\0');
-  puts(mem);
+  strcpy(label[label_n], token);
+  label_offset[label_n] = 0;
+  writeNNN('g', label_n);
+  label_n++;
+}
+
+void resolve_gotos() {
+  char buf[3];
+  int n;
+
+  for (int i = 0; i < pc; i += 2) {
+    if (memory[i] == 'g') {
+      buf[0] = memory[i + 1];
+      buf[1] = memory[i + 2];
+      buf[2] = memory[i + 3];
+
+      n = label_offset[atoi(buf)];
+
+      memory[i + 1] = hex((n & 0xf00) >> 8);
+      memory[i + 2] = hex((n & 0xf0) >> 4);
+      memory[i + 3] = hex((n & 0xf));
+    }
+  }
 }
 
 void read(char *name) {
-  f = fopen(name, "r");
-  if (f == NULL) exit(1);
+  file = fopen(name, "r");
+  if (file == NULL) exit(1);
 
-  parse();
+  while (scan_token() != NULL) {
+    if (is_register())
+      parse_assign();
+    else if (strcmp(token, "print") == 0)
+      parse_print();
+    else if (strcmp(token, "if") == 0)
+      parse_if();
+    else if (strcmp(token, ":") == 0)
+      parse_label();
+    else if (strcmp(token, "goto") == 0)
+      parse_goto();
+    else
+      exit(1);
+  }
+  write('.', '_', '_', '_');
 
-  fclose(f);
+  resolve_gotos();
+
+  fclose(file);
 }
 
-int regnum(char r) {
-  if (r == 'x') return 0;
-  if (r == 'y') return 1;
-  if (r == 'z') return 2;
-  if (r == 'w') return 3;
+int get_register() {
+  char c = memory[pc++];
+  switch (c) {
+  case 'x': return 0;
+  case 'y': return 1;
+  case 'z': return 2;
+  case 'w': return 3;
+  }
+}
+
+int getNN() {
+  char a = memory[pc++];
+  char b = memory[pc++];
+  return ord(a) * 0x10 + ord(b);
+}
+
+int getNNN() {
+  char a = memory[pc++];
+  char b = memory[pc++];
+  char c = memory[pc++];
+  return ord(a) * 0x100 + ord(b) * 0x10 + ord(c);
+}
+
+void assign_register_to_register(int *r) {
+  char op = memory[pc++];
+  int reg_n = get_register();
+
+  switch (op) {
+  case '=': r[reg_n] = r[get_register()]; break;
+  case '+': r[reg_n] += r[get_register()]; break;
+  case '-': r[reg_n] -= r[get_register()]; break;
+  case '*': r[reg_n] *= r[get_register()]; break;
+  case '/': r[reg_n] /= r[get_register()]; break;
+  case '%': r[reg_n] %= r[get_register()]; break;
+  }
+}
+
+void if_false_skip_next_instruction(int *r) {
+  char cmp = memory[pc++];
+  int a = r[get_register()];
+  int b = r[get_register()];
+
+  switch (cmp) {
+  case '=':
+    if (!(a == b)) pc += 4;
+    break;
+  case '!':
+    if (!(a != b)) pc += 4;
+    break;
+  }
 }
 
 void exec() {
-  uint16_t i = 0;
-  uint8_t r[4];
+  char o;
+  int r[4];
+  int reg_n;
+  pc = 0;
 
-  char a, b, c;
-
-  while (1) {
-    switch (mem[i++]) {
+  while ((o = memory[pc++]) != '.') {
+    switch (o) {
     case '=':
-      a = mem[i++], b = mem[i++], c = mem[i++];
-      r[regnum(a)] = (hexnum(b) << 4) | (hexnum(c) & 0xf);
+      reg_n = get_register();
+      r[reg_n] = getNN();
       break;
-    case '!':
-      printf("%d\n", r[regnum(mem[i++])]);
+    case '+':
+      reg_n = get_register();
+      r[reg_n] += getNN();
       break;
-    case '.':
-      return;
-    default:
-      break;
+    case ':': assign_register_to_register(r); break;
+    case '?': if_false_skip_next_instruction(r); break;
+    case 'g': pc = getNNN(); break;
+    case 'p': printf("%d\n", r[get_register()]); break;
     }
   }
 }
 
 int main(void) {
   read("game.baya");
+
+  for (int i; i < pc; i += 4) {
+    printf("%c", memory[i]);
+    printf("%c", memory[i + 1]);
+    printf("%c", memory[i + 2]);
+    printf("%c ", memory[i + 3]);
+  }
+  putchar('\n');
+
   exec();
 
   return 0;

@@ -3,14 +3,23 @@ x = 1
 y = 1
 z = 5
 
-(
-loop
+( add 1 to loop correctly )
+z += 1
+
+: loop
   x *= y
   y += 1
-  if y == z then break
-again
-)
+  if y != z then goto loop
 
 print x
 print y
 print z
+
+goto abc
+goto abc
+: def
+goto end
+goto end
+: abc
+goto def
+: end
