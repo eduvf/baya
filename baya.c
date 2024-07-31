@@ -281,6 +281,7 @@ void assign_register_to_register(int *r) {
   int reg_n = get_register();
 
   switch (op) {
+  case '=': r[reg_n] = r[get_register()]; break;
   case '+': r[reg_n] += r[get_register()]; break;
   case '-': r[reg_n] -= r[get_register()]; break;
   case '*': r[reg_n] *= r[get_register()]; break;
