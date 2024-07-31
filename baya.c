@@ -44,11 +44,6 @@ void write(char a, char b, char c, char d) {
   mem[p++] = d;
 }
 
-void write2(char a, char b) {
-  mem[p++] = a;
-  mem[p++] = b;
-}
-
 void writeNN(char a, char b, int n) {
   mem[p++] = a;
   mem[p++] = b;
@@ -178,7 +173,7 @@ void parse_print() {
   next();
   if (!(reg = isreg())) exit(1);
 
-  write2('p', reg);
+  write('p', reg, '_', '_');
   return;
 }
 
@@ -248,7 +243,7 @@ void read(char *name) {
     else
       exit(1);
   }
-  write2('.', ' ');
+  write('.', '_', '_', '_');
 
   resolve_gotos();
 
