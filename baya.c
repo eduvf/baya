@@ -278,21 +278,47 @@ int getNNN() {
   return ord(a) * 0x100 + ord(b) * 0x10 + ord(c);
 }
 
+void calcreg(int *r) {
+  char op = mem[p++];
+  int r_num = getreg();
+
+  switch (op) {
+  case '+':
+    r[r_num] += r[getreg()];
+    break;
+  case '-':
+    r[r_num] -= r[getreg()];
+    break;
+  case '*':
+    r[r_num] *= r[getreg()];
+    break;
+  case '/':
+    r[r_num] /= r[getreg()];
+    break;
+  case '%':
+    r[r_num] %= r[getreg()];
+    break;
+  }
+}
+
 void exec() {
   char o;
   int r[4];
+  int r_num;
   p = 0;
 
   while ((o = mem[p++]) != '.') {
     switch (o) {
     case '=':
-      r[getreg()] = getNN();
+      r_num = getreg();
+      r[r_num] = getNN();
       break;
     case '+':
-      r[getreg()] += getNN();
+      r_num = getreg();
+      r[r_num] += getNN();
       break;
     case ':':
-      p += 3;
+      calcreg(r);
       break;
     case '?':
       p += 3;
