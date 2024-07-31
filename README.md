@@ -18,5 +18,7 @@ x += 1
 
 goto label
 
-if x != 0 then print x
+if x != y then print x
+
+( TODO ) if x != 0 then print x
 ```
