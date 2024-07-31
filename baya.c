@@ -157,11 +157,15 @@ void parse_if() {
   if ((other_reg = isreg())) {
     write('?', cmp, reg, other_reg);
   } else {
+    exit(1);
+  }
+
+  /* else {
     if (isnum(&num) != 0) exit(1);
     if (num > 0xf) exit(1);
 
     write('?', cmp, reg, hex(num));
-  }
+  } */
 
   next();
   if (strcmp(t, "then") != 0) exit(1);
@@ -301,6 +305,21 @@ void calcreg(int *r) {
   }
 }
 
+void checkbranch(int *r) {
+  char cmp = mem[p++];
+  int a = r[getreg()];
+  int b = r[getreg()];
+
+  switch (cmp) {
+  case '=':
+    if (!(a == b)) p += 4;
+    break;
+  case '!':
+    if (!(a != b)) p += 4;
+    break;
+  }
+}
+
 void exec() {
   char o;
   int r[4];
@@ -321,10 +340,10 @@ void exec() {
       calcreg(r);
       break;
     case '?':
-      p += 3;
+      checkbranch(r);
       break;
     case 'g':
-      p += 3;
+      p = getNNN();
       break;
     case 'p':
       printf("%d\n", r[getreg()]);
