@@ -9,19 +9,6 @@
 #define TOKEN_LENGTH 16
 #define LABEL_MAX 64
 
-/*
- * INSTRUCTIONS
- *
- * =xNN    x = NN
- * +xNN    x += NN
- * :oxy    x o= y
- * ?oxy    if x o y then
- * gNNN    goto NNN
- * px      print x
- * .       halt
- *
- */
-
 FILE *file;
 char token[TOKEN_LENGTH];
 int line = 1;
@@ -33,29 +20,102 @@ char label_offset[LABEL_MAX];
 char memory[(1 << 12)];
 char pc = 0;
 
+enum REGISTER { RX = 1, RY, RZ, RW };
+
+enum INSTRUCTION {
+  HALT = 1,
+  GOTO,           // goto NNN
+  PRINT,          // print x
+  REG_OP_REG,     // x o= y
+  REG_SET_LIT,    // x = NN
+  REG_ADD_LIT,    // x += NN
+  IF_REG_CMP_REG, // if x c y then
+};
+
+enum OPERATION {
+  SET = 1, // =
+  ADD,     // +=
+  SUB,     // -=
+  MUL,     // *=
+  DIV,     // /=
+  MOD      // %=
+};
+
+enum COMPARISON {
+  EQ = 1, // ==
+  NE      // !=
+};
+
 char hex(int n) { return n + ((n <= 9) ? '0' : 'A' - 10); }
 
 int ord(char c) { return (c <= '9') ? c - '0' : (c & 0x7) + 9; }
 
-void write(char a, char b, char c, char d) {
-  memory[pc++] = a;
-  memory[pc++] = b;
-  memory[pc++] = c;
-  memory[pc++] = d;
+// void write(char a, char b, char c, char d) {
+//   memory[pc++] = a;
+//   memory[pc++] = b;
+//   memory[pc++] = c;
+//   memory[pc++] = d;
+// }
+
+// void writeNN(char a, char b, int n) {
+//   memory[pc++] = a;
+//   memory[pc++] = b;
+//   memory[pc++] = hex((n & 0xf0) >> 4);
+//   memory[pc++] = hex((n & 0xf));
+// }
+
+// void writeNNN(char a, int n) {
+//   memory[pc++] = a;
+//   memory[pc++] = hex((n & 0xf00) >> 8);
+//   memory[pc++] = hex((n & 0xf0) >> 4);
+//   memory[pc++] = hex((n & 0xf));
+// }
+
+void encode_halt() {
+  memory[pc++] = HALT;
+  pc += 3;
 }
 
-void writeNN(char a, char b, int n) {
-  memory[pc++] = a;
-  memory[pc++] = b;
-  memory[pc++] = hex((n & 0xf0) >> 4);
-  memory[pc++] = hex((n & 0xf));
+void encode_goto(int n) {
+  memory[pc++] = GOTO;
+  memory[pc++] = (n & 0xf00) >> 8;
+  memory[pc++] = (n & 0xf0) >> 4;
+  memory[pc++] = (n & 0xf);
 }
 
-void writeNNN(char a, int n) {
-  memory[pc++] = a;
-  memory[pc++] = hex((n & 0xf00) >> 8);
-  memory[pc++] = hex((n & 0xf0) >> 4);
-  memory[pc++] = hex((n & 0xf));
+void encode_print(enum REGISTER r) {
+  memory[pc++] = PRINT;
+  memory[pc++] = r;
+  pc += 2;
+}
+
+void encode_reg_op_reg(enum OPERATION op, enum REGISTER x, enum REGISTER y) {
+  memory[pc++] = REG_OP_REG;
+  memory[pc++] = op;
+  memory[pc++] = x;
+  memory[pc++] = y;
+}
+
+void encode_reg_set_lit(enum REGISTER r, int n) {
+  memory[pc++] = REG_SET_LIT;
+  memory[pc++] = r;
+  memory[pc++] = (n & 0xf0) >> 4;
+  memory[pc++] = (n & 0xf);
+}
+
+void encode_reg_add_lit(enum REGISTER r, int n) {
+  memory[pc++] = REG_ADD_LIT;
+  memory[pc++] = r;
+  memory[pc++] = (n & 0xf0) >> 4;
+  memory[pc++] = (n & 0xf);
+}
+
+void encode_if_reg_cmp_reg(enum COMPARISON cmp, enum REGISTER x,
+                           enum REGISTER y) {
+  memory[pc++] = IF_REG_CMP_REG;
+  memory[pc++] = cmp;
+  memory[pc++] = x;
+  memory[pc++] = y;
 }
 
 char is_number(char *n) {
@@ -68,27 +128,27 @@ void error(const char *msg) {
   exit(1);
 }
 
-char is_register() {
-  if (strcmp(token, "x") == 0) return 'x';
-  if (strcmp(token, "y") == 0) return 'y';
-  if (strcmp(token, "z") == 0) return 'z';
-  if (strcmp(token, "w") == 0) return 'w';
+enum REGISTER is_register() {
+  if (strcmp(token, "x") == 0) return RX;
+  if (strcmp(token, "y") == 0) return RY;
+  if (strcmp(token, "z") == 0) return RZ;
+  if (strcmp(token, "w") == 0) return RW;
   return 0;
 }
 
-char is_operator() {
-  if (strcmp(token, "=") == 0) return '=';
-  if (strcmp(token, "+=") == 0) return '+';
-  if (strcmp(token, "-=") == 0) return '-';
-  if (strcmp(token, "*=") == 0) return '*';
-  if (strcmp(token, "/=") == 0) return '/';
-  if (strcmp(token, "%=") == 0) return '%';
+enum OPERATION is_operator() {
+  if (strcmp(token, "=") == 0) return SET;
+  if (strcmp(token, "+=") == 0) return ADD;
+  if (strcmp(token, "-=") == 0) return SUB;
+  if (strcmp(token, "*=") == 0) return MUL;
+  if (strcmp(token, "/=") == 0) return DIV;
+  if (strcmp(token, "%=") == 0) return MOD;
   return 0;
 }
 
-char is_compare() {
-  if (strcmp(token, "==") == 0) return '=';
-  if (strcmp(token, "!=") == 0) return '!';
+enum COMPARISON is_compare() {
+  if (strcmp(token, "==") == 0) return EQ;
+  if (strcmp(token, "!=") == 0) return NE;
   return 0;
 }
 
@@ -121,9 +181,9 @@ void next_token() {
 }
 
 void parse_assign() {
-  char reg_to;
-  char reg_from;
-  char op;
+  enum REGISTER reg_to;
+  enum REGISTER reg_from;
+  enum OPERATION op;
   char num;
 
   reg_to = is_register();
@@ -132,22 +192,25 @@ void parse_assign() {
 
   next_token();
   if ((reg_from = is_register())) {
-    write(':', op, reg_to, reg_from);
+    encode_reg_op_reg(op, reg_to, reg_from);
     return;
   }
 
-  if (!(op == '=' || op == '+'))
+  if (!(op == EQ || op == NE))
     error("unexpected operation between register and literal");
   if (is_number(&num) != 0) error("invalid number");
 
-  writeNN(op, reg_to, num);
+  if (op == EQ)
+    encode_reg_set_lit(reg_to, num);
+  else
+    encode_reg_add_lit(reg_to, num);
   return;
 }
 
 void parse_if() {
-  char reg_lhs;
-  char reg_rhs;
-  char cmp;
+  enum REGISTER reg_lhs;
+  enum REGISTER reg_rhs;
+  enum COMPARISON cmp;
   char num;
 
   next_token();
@@ -158,17 +221,10 @@ void parse_if() {
 
   next_token();
   if ((reg_rhs = is_register())) {
-    write('?', cmp, reg_lhs, reg_rhs);
+    encode_if_reg_cmp_reg(cmp, reg_lhs, reg_rhs);
   } else {
     error("<< TODO >>");
   }
-
-  /* else {
-    if (isnum(&num) != 0) exit(1);
-    if (num > 0xf) exit(1);
-
-    write('?', cmp, reg, hex(num));
-  } */
 
   next_token();
   if (strcmp(token, "then") != 0) error("expected \"then\"");
@@ -176,12 +232,12 @@ void parse_if() {
 }
 
 void parse_print() {
-  char reg;
+  enum REGISTER reg;
 
   next_token();
   if (!(reg = is_register())) error("expected register to print");
 
-  write('p', reg, '_', '_');
+  encode_print(reg);
   return;
 }
 
@@ -207,32 +263,32 @@ void parse_goto() {
 
   for (int i = 0; i < label_n; i++) {
     if (strcmp(token, label[i]) == 0) {
-      writeNNN('g', i);
+      encode_goto(i);
       return;
     }
   }
 
   strcpy(label[label_n], token);
   label_offset[label_n] = 0;
-  writeNNN('g', label_n);
+  encode_goto(label_n);
   label_n++;
 }
 
 void resolve_gotos() {
-  char buf[3];
+  char a, b, c;
   int n;
 
-  for (int i = 0; i < pc; i += 2) {
-    if (memory[i] == 'g') {
-      buf[0] = memory[i + 1];
-      buf[1] = memory[i + 2];
-      buf[2] = memory[i + 3];
+  for (int i = 0; i < pc; i += 4) {
+    if (memory[i] == GOTO) {
+      a = memory[i + 1];
+      b = memory[i + 2];
+      c = memory[i + 3];
 
-      n = label_offset[atoi(buf)];
+      n = label_offset[(a << 8) | (b << 4) | c];
 
-      memory[i + 1] = hex((n & 0xf00) >> 8);
-      memory[i + 2] = hex((n & 0xf0) >> 4);
-      memory[i + 3] = hex((n & 0xf));
+      memory[i + 1] = (n & 0xf00) >> 8;
+      memory[i + 2] = (n & 0xf0) >> 4;
+      memory[i + 3] = (n & 0xf);
     }
   }
 }
@@ -255,7 +311,7 @@ void read(char *name) {
     else
       error("invalid instruction");
   }
-  write('.', '_', '_', '_');
+  encode_halt();
 
   resolve_gotos();
 
@@ -342,14 +398,14 @@ int main(void) {
   read("game.baya");
 
   for (int i; i < pc; i += 4) {
-    printf("%c", memory[i]);
-    printf("%c", memory[i + 1]);
-    printf("%c", memory[i + 2]);
-    printf("%c ", memory[i + 3]);
+    printf("%x", memory[i]);
+    printf("%x", memory[i + 1]);
+    printf("%x", memory[i + 2]);
+    printf("%x ", memory[i + 3]);
   }
   putchar('\n');
 
-  exec();
+  // exec();
 
   return 0;
 }
