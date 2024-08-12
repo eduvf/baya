@@ -24,6 +24,7 @@
 
 FILE *file;
 char token[TOKEN_LENGTH];
+int line = 1;
 
 char label_n = 0;
 char label[LABEL_MAX][TOKEN_LENGTH];
@@ -62,6 +63,11 @@ char is_number(char *n) {
   return errno;
 }
 
+void error(const char *msg) {
+  printf("ERROR AROUND LINE %d: %s\n", line, msg);
+  exit(1);
+}
+
 char is_register() {
   if (strcmp(token, "x") == 0) return 'x';
   if (strcmp(token, "y") == 0) return 'y';
@@ -92,6 +98,8 @@ char *scan_token() {
   bool comment = false;
 
   while ((c = fgetc(file)) != EOF) {
+    if (c == '\n') line++;
+
     comment = comment && c != ')' || c == '(';
     if (comment || c == ')') continue;
 
@@ -109,7 +117,7 @@ char *scan_token() {
 
 void next_token() {
   if (scan_token() != NULL) return;
-  exit(1);
+  error("missing token");
 }
 
 void parse_assign() {
@@ -120,7 +128,7 @@ void parse_assign() {
 
   reg_to = is_register();
   next_token();
-  if (!(op = is_operator())) exit(1);
+  if (!(op = is_operator())) error("expected operator after register");
 
   next_token();
   if ((reg_from = is_register())) {
@@ -128,8 +136,9 @@ void parse_assign() {
     return;
   }
 
-  if (!(op == '=' || op == '+')) exit(1);
-  if (is_number(&num) != 0) exit(1);
+  if (!(op == '=' || op == '+'))
+    error("unexpected operation between register and literal");
+  if (is_number(&num) != 0) error("invalid number");
 
   writeNN(op, reg_to, num);
   return;
@@ -142,16 +151,16 @@ void parse_if() {
   char num;
 
   next_token();
-  if (!(reg_lhs = is_register())) exit(1);
+  if (!(reg_lhs = is_register())) error("expected register in condition");
 
   next_token();
-  if (!(cmp = is_compare())) exit(1);
+  if (!(cmp = is_compare())) error("expected comparison");
 
   next_token();
   if ((reg_rhs = is_register())) {
     write('?', cmp, reg_lhs, reg_rhs);
   } else {
-    exit(1);
+    error("<< TODO >>");
   }
 
   /* else {
@@ -162,7 +171,7 @@ void parse_if() {
   } */
 
   next_token();
-  if (strcmp(token, "then") != 0) exit(1);
+  if (strcmp(token, "then") != 0) error("expected \"then\"");
   return;
 }
 
@@ -170,7 +179,7 @@ void parse_print() {
   char reg;
 
   next_token();
-  if (!(reg = is_register())) exit(1);
+  if (!(reg = is_register())) error("expected register to print");
 
   write('p', reg, '_', '_');
   return;
@@ -178,7 +187,7 @@ void parse_print() {
 
 void parse_label() {
   next_token();
-  if (label_n == LABEL_MAX) exit(1);
+  if (label_n == LABEL_MAX) error("too many labels");
 
   for (int i = 0; i < label_n; i++) {
     if (strcmp(token, label[i]) == 0) {
@@ -194,7 +203,7 @@ void parse_label() {
 
 void parse_goto() {
   next_token();
-  if (label_n == LABEL_MAX) exit(1);
+  if (label_n == LABEL_MAX) error("too many labels");
 
   for (int i = 0; i < label_n; i++) {
     if (strcmp(token, label[i]) == 0) {
@@ -230,7 +239,7 @@ void resolve_gotos() {
 
 void read(char *name) {
   file = fopen(name, "r");
-  if (file == NULL) exit(1);
+  if (file == NULL) error("couldn't open file");
 
   while (scan_token() != NULL) {
     if (is_register())
@@ -244,7 +253,7 @@ void read(char *name) {
     else if (strcmp(token, "goto") == 0)
       parse_goto();
     else
-      exit(1);
+      error("invalid instruction");
   }
   write('.', '_', '_', '_');
 
