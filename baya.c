@@ -20,9 +20,9 @@ char label_offset[LABEL_MAX];
 char memory[(1 << 12)];
 char pc = 0;
 
-enum REGISTER { RX = 1, RY, RZ, RW };
+typedef enum { RX = 1, RY, RZ, RW } reg_t;
 
-enum INSTRUCTION {
+typedef enum {
   HALT = 1,
   GOTO,           // goto NNN
   PRINT,          // print x
@@ -30,21 +30,21 @@ enum INSTRUCTION {
   REG_SET_LIT,    // x = NN
   REG_ADD_LIT,    // x += NN
   IF_REG_CMP_REG, // if x c y then
-};
+} ins_t;
 
-enum OPERATION {
+typedef enum {
   SET = 1, // =
   ADD,     // +=
   SUB,     // -=
   MUL,     // *=
   DIV,     // /=
   MOD      // %=
-};
+} op_t;
 
-enum COMPARISON {
+typedef enum {
   EQ = 1, // ==
   NE      // !=
-};
+} cmp_t;
 
 void encode_halt() {
   memory[pc++] = HALT;
@@ -58,35 +58,34 @@ void encode_goto(int n) {
   memory[pc++] = (n & 0xf);
 }
 
-void encode_print(enum REGISTER r) {
+void encode_print(reg_t r) {
   memory[pc++] = PRINT;
   memory[pc++] = r;
   pc += 2;
 }
 
-void encode_reg_op_reg(enum OPERATION op, enum REGISTER x, enum REGISTER y) {
+void encode_reg_op_reg(op_t op, reg_t x, reg_t y) {
   memory[pc++] = REG_OP_REG;
   memory[pc++] = op;
   memory[pc++] = x;
   memory[pc++] = y;
 }
 
-void encode_reg_set_lit(enum REGISTER r, int n) {
+void encode_reg_set_lit(reg_t r, int n) {
   memory[pc++] = REG_SET_LIT;
   memory[pc++] = r;
   memory[pc++] = (n & 0xf0) >> 4;
   memory[pc++] = (n & 0xf);
 }
 
-void encode_reg_add_lit(enum REGISTER r, int n) {
+void encode_reg_add_lit(reg_t r, int n) {
   memory[pc++] = REG_ADD_LIT;
   memory[pc++] = r;
   memory[pc++] = (n & 0xf0) >> 4;
   memory[pc++] = (n & 0xf);
 }
 
-void encode_if_reg_cmp_reg(enum COMPARISON cmp, enum REGISTER x,
-                           enum REGISTER y) {
+void encode_if_reg_cmp_reg(cmp_t cmp, reg_t x, reg_t y) {
   memory[pc++] = IF_REG_CMP_REG;
   memory[pc++] = cmp;
   memory[pc++] = x;
@@ -103,7 +102,7 @@ void error(const char *msg) {
   exit(1);
 }
 
-enum REGISTER is_register() {
+reg_t is_register() {
   if (strcmp(token, "x") == 0) return RX;
   if (strcmp(token, "y") == 0) return RY;
   if (strcmp(token, "z") == 0) return RZ;
@@ -111,7 +110,7 @@ enum REGISTER is_register() {
   return 0;
 }
 
-enum OPERATION is_operator() {
+op_t is_operator() {
   if (strcmp(token, "=") == 0) return SET;
   if (strcmp(token, "+=") == 0) return ADD;
   if (strcmp(token, "-=") == 0) return SUB;
@@ -121,7 +120,7 @@ enum OPERATION is_operator() {
   return 0;
 }
 
-enum COMPARISON is_compare() {
+cmp_t is_compare() {
   if (strcmp(token, "==") == 0) return EQ;
   if (strcmp(token, "!=") == 0) return NE;
   return 0;
@@ -156,9 +155,9 @@ void next_token() {
 }
 
 void parse_assign() {
-  enum REGISTER reg_to;
-  enum REGISTER reg_from;
-  enum OPERATION op;
+  reg_t reg_to;
+  reg_t reg_from;
+  op_t op;
   char num;
 
   reg_to = is_register();
@@ -183,9 +182,9 @@ void parse_assign() {
 }
 
 void parse_if() {
-  enum REGISTER reg_lhs;
-  enum REGISTER reg_rhs;
-  enum COMPARISON cmp;
+  reg_t reg_lhs;
+  reg_t reg_rhs;
+  cmp_t cmp;
   char num;
 
   next_token();
@@ -207,7 +206,7 @@ void parse_if() {
 }
 
 void parse_print() {
-  enum REGISTER reg;
+  reg_t reg;
 
   next_token();
   if (!(reg = is_register())) error("expected register to print");
@@ -311,8 +310,13 @@ int getNNN() {
   return a * 0x100 + b * 0x10 + c;
 }
 
+void print_register(int *r) {
+  printf("%d\n", r[get_register()]);
+  pc += 2;
+}
+
 void assign_register_to_register(int *r) {
-  char op = memory[pc++];
+  op_t op = memory[pc++];
   int reg_n = get_register();
 
   switch (op) {
@@ -326,7 +330,7 @@ void assign_register_to_register(int *r) {
 }
 
 void if_false_skip_next_instruction(int *r) {
-  char cmp = memory[pc++];
+  cmp_t cmp = memory[pc++];
   int a = r[get_register()];
   int b = r[get_register()];
 
@@ -341,25 +345,40 @@ void if_false_skip_next_instruction(int *r) {
 }
 
 void exec() {
-  char o;
+  ins_t o;
   int r[4];
   int reg_n;
   pc = 0;
 
-  while ((o = memory[pc++]) != HALT) {
+  while ((o = memory[pc++])) {
     switch (o) {
-    case REG_SET_LIT:
+    case HALT: return;
+    case GOTO: {
+      pc = getNNN();
+      break;
+    }
+    case PRINT: {
+      print_register(r);
+      break;
+    }
+    case REG_OP_REG: {
+      assign_register_to_register(r);
+      break;
+    }
+    case IF_REG_CMP_REG: {
+      if_false_skip_next_instruction(r);
+      break;
+    }
+    case REG_SET_LIT: {
       reg_n = get_register();
       r[reg_n] = getNN();
       break;
-    case REG_ADD_LIT:
+    }
+    case REG_ADD_LIT: {
       reg_n = get_register();
       r[reg_n] += getNN();
       break;
-    case REG_OP_REG: assign_register_to_register(r); break;
-    case IF_REG_CMP_REG: if_false_skip_next_instruction(r); break;
-    case GOTO: pc = getNNN(); break;
-    case PRINT: printf("%d\n", r[get_register()]); break;
+    }
     }
   }
 }
