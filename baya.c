@@ -320,25 +320,20 @@ void read(char *name) {
 
 int get_register() {
   char c = memory[pc++];
-  switch (c) {
-  case 'x': return 0;
-  case 'y': return 1;
-  case 'z': return 2;
-  case 'w': return 3;
-  }
+  return c - 1;
 }
 
 int getNN() {
   char a = memory[pc++];
   char b = memory[pc++];
-  return ord(a) * 0x10 + ord(b);
+  return a * 0x10 + b;
 }
 
 int getNNN() {
   char a = memory[pc++];
   char b = memory[pc++];
   char c = memory[pc++];
-  return ord(a) * 0x100 + ord(b) * 0x10 + ord(c);
+  return a * 0x100 + b * 0x10 + c;
 }
 
 void assign_register_to_register(int *r) {
@@ -346,12 +341,12 @@ void assign_register_to_register(int *r) {
   int reg_n = get_register();
 
   switch (op) {
-  case '=': r[reg_n] = r[get_register()]; break;
-  case '+': r[reg_n] += r[get_register()]; break;
-  case '-': r[reg_n] -= r[get_register()]; break;
-  case '*': r[reg_n] *= r[get_register()]; break;
-  case '/': r[reg_n] /= r[get_register()]; break;
-  case '%': r[reg_n] %= r[get_register()]; break;
+  case SET: r[reg_n] = r[get_register()]; break;
+  case ADD: r[reg_n] += r[get_register()]; break;
+  case SUB: r[reg_n] -= r[get_register()]; break;
+  case MUL: r[reg_n] *= r[get_register()]; break;
+  case DIV: r[reg_n] /= r[get_register()]; break;
+  case MOD: r[reg_n] %= r[get_register()]; break;
   }
 }
 
@@ -361,10 +356,10 @@ void if_false_skip_next_instruction(int *r) {
   int b = r[get_register()];
 
   switch (cmp) {
-  case '=':
+  case EQ:
     if (!(a == b)) pc += 4;
     break;
-  case '!':
+  case NE:
     if (!(a != b)) pc += 4;
     break;
   }
@@ -376,20 +371,20 @@ void exec() {
   int reg_n;
   pc = 0;
 
-  while ((o = memory[pc++]) != '.') {
+  while ((o = memory[pc++]) != HALT) {
     switch (o) {
-    case '=':
+    case REG_SET_LIT:
       reg_n = get_register();
       r[reg_n] = getNN();
       break;
-    case '+':
+    case REG_ADD_LIT:
       reg_n = get_register();
       r[reg_n] += getNN();
       break;
-    case ':': assign_register_to_register(r); break;
-    case '?': if_false_skip_next_instruction(r); break;
-    case 'g': pc = getNNN(); break;
-    case 'p': printf("%d\n", r[get_register()]); break;
+    case REG_OP_REG: assign_register_to_register(r); break;
+    case IF_REG_CMP_REG: if_false_skip_next_instruction(r); break;
+    case GOTO: pc = getNNN(); break;
+    case PRINT: printf("%d\n", r[get_register()]); break;
     }
   }
 }
@@ -405,7 +400,7 @@ int main(void) {
   }
   putchar('\n');
 
-  // exec();
+  exec();
 
   return 0;
 }
