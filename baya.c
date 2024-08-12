@@ -46,31 +46,6 @@ enum COMPARISON {
   NE      // !=
 };
 
-char hex(int n) { return n + ((n <= 9) ? '0' : 'A' - 10); }
-
-int ord(char c) { return (c <= '9') ? c - '0' : (c & 0x7) + 9; }
-
-// void write(char a, char b, char c, char d) {
-//   memory[pc++] = a;
-//   memory[pc++] = b;
-//   memory[pc++] = c;
-//   memory[pc++] = d;
-// }
-
-// void writeNN(char a, char b, int n) {
-//   memory[pc++] = a;
-//   memory[pc++] = b;
-//   memory[pc++] = hex((n & 0xf0) >> 4);
-//   memory[pc++] = hex((n & 0xf));
-// }
-
-// void writeNNN(char a, int n) {
-//   memory[pc++] = a;
-//   memory[pc++] = hex((n & 0xf00) >> 8);
-//   memory[pc++] = hex((n & 0xf0) >> 4);
-//   memory[pc++] = hex((n & 0xf));
-// }
-
 void encode_halt() {
   memory[pc++] = HALT;
   pc += 3;
