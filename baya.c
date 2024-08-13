@@ -11,6 +11,9 @@
 #define TOKEN_LENGTH 16
 #define LABEL_MAX 64
 
+#define PALETTE_SIZE 4
+Color PALETTE[] = {BLACK, DARKBROWN, BROWN, BEIGE};
+
 FILE *file;
 char token[TOKEN_LENGTH];
 int line = 1;
@@ -28,6 +31,7 @@ typedef enum {
   HALT = 1,
   GOTO,           // goto NNN
   PRINT,          // print x
+  CLS,            // cls N
   REG_OP_REG,     // x o= y
   REG_SET_LIT,    // x = NN
   REG_ADD_LIT,    // x += NN
@@ -63,6 +67,12 @@ void encode_goto(int n) {
 void encode_print(reg_t r) {
   memory[pc++] = PRINT;
   memory[pc++] = r;
+  pc += 2;
+}
+
+void encode_cls(int n) {
+  memory[pc++] = CLS;
+  memory[pc++] = n & (PALETTE_SIZE - 1);
   pc += 2;
 }
 
@@ -217,6 +227,16 @@ void parse_print() {
   return;
 }
 
+void parse_cls() {
+  char col;
+
+  next_token();
+  if (is_number(&col) != 0) error("expected literal color");
+
+  encode_cls(col);
+  return;
+}
+
 void parse_label() {
   next_token();
   if (label_n == LABEL_MAX) error("too many labels");
@@ -278,6 +298,8 @@ void read_file(char *name) {
       parse_assign();
     else if (strcmp(token, "print") == 0)
       parse_print();
+    else if (strcmp(token, "cls") == 0)
+      parse_cls();
     else if (strcmp(token, "if") == 0)
       parse_if();
     else if (strcmp(token, ":") == 0)
@@ -299,6 +321,8 @@ int get_register() {
   return c - 1;
 }
 
+int getN() { return memory[pc++]; }
+
 int getNN() {
   char a = memory[pc++];
   char b = memory[pc++];
@@ -314,6 +338,11 @@ int getNNN() {
 
 void print_register(int *r) {
   printf("%d\n", r[get_register()]);
+  pc += 2;
+}
+
+void clear_screen(int *r) {
+  ClearBackground(PALETTE[getN()]);
   pc += 2;
 }
 
@@ -361,6 +390,10 @@ void exec() {
     }
     case PRINT: {
       print_register(r);
+      break;
+    }
+    case CLS: {
+      clear_screen(r);
       break;
     }
     case REG_OP_REG: {

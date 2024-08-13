@@ -1,4 +1,7 @@
 ( comment )
+
+cls 3
+
 x = 1
 y = 1
 z = 5
