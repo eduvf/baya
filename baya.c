@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "raylib.h"
+
 #define TOKEN_LENGTH 16
 #define LABEL_MAX 64
 
@@ -267,7 +269,7 @@ void resolve_gotos() {
   }
 }
 
-void read(char *name) {
+void read_file(char *name) {
   file = fopen(name, "r");
   if (file == NULL) error("couldn't open file");
 
@@ -384,7 +386,7 @@ void exec() {
 }
 
 int main(void) {
-  read("game.baya");
+  read_file("game.baya");
 
   for (int i; i < pc; i += 4) {
     printf("%x", memory[i]);
@@ -394,7 +396,19 @@ int main(void) {
   }
   putchar('\n');
 
-  exec();
+  InitWindow(120, 80, "🫐 baya");
+  SetTargetFPS(12);
+
+  while (!WindowShouldClose()) {
+    BeginDrawing();
+
+    ClearBackground(BLUE);
+    exec();
+
+    EndDrawing();
+  }
+
+  CloseWindow();
 
   return 0;
 }
