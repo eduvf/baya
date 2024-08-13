@@ -25,7 +25,9 @@ char label_offset[LABEL_MAX];
 char memory[(1 << 12)];
 char pc = 0;
 
-typedef enum { RX = 1, RY, RZ, RW } reg_t;
+#define REGISTER_N 5
+char registers[REGISTER_N];
+typedef enum { RX = 1, RY, RZ, RW, RT } reg_t;
 
 typedef enum {
   HALT = 1,
@@ -119,6 +121,7 @@ reg_t is_register() {
   if (strcmp(token, "y") == 0) return RY;
   if (strcmp(token, "z") == 0) return RZ;
   if (strcmp(token, "w") == 0) return RW;
+  if (strcmp(token, "t") == 0) return RT;
   return 0;
 }
 
@@ -336,34 +339,34 @@ int getNNN() {
   return a * 0x100 + b * 0x10 + c;
 }
 
-void print_register(int *r) {
-  printf("%d\n", r[get_register()]);
+void print_register() {
+  printf("%d\n", registers[get_register()]);
   pc += 2;
 }
 
-void clear_screen(int *r) {
+void clear_screen() {
   ClearBackground(PALETTE[getN()]);
   pc += 2;
 }
 
-void assign_register_to_register(int *r) {
+void assign_register_to_register() {
   op_t op = memory[pc++];
   int reg_n = get_register();
 
   switch (op) {
-  case SET: r[reg_n] = r[get_register()]; break;
-  case ADD: r[reg_n] += r[get_register()]; break;
-  case SUB: r[reg_n] -= r[get_register()]; break;
-  case MUL: r[reg_n] *= r[get_register()]; break;
-  case DIV: r[reg_n] /= r[get_register()]; break;
-  case MOD: r[reg_n] %= r[get_register()]; break;
+  case SET: registers[reg_n] = registers[get_register()]; break;
+  case ADD: registers[reg_n] += registers[get_register()]; break;
+  case SUB: registers[reg_n] -= registers[get_register()]; break;
+  case MUL: registers[reg_n] *= registers[get_register()]; break;
+  case DIV: registers[reg_n] /= registers[get_register()]; break;
+  case MOD: registers[reg_n] %= registers[get_register()]; break;
   }
 }
 
-void if_false_skip_next_instruction(int *r) {
+void if_false_skip_next_instruction() {
   cmp_t cmp = memory[pc++];
-  int a = r[get_register()];
-  int b = r[get_register()];
+  int a = registers[get_register()];
+  int b = registers[get_register()];
 
   switch (cmp) {
   case EQ:
@@ -377,7 +380,6 @@ void if_false_skip_next_instruction(int *r) {
 
 void exec() {
   ins_t o;
-  int r[4];
   int reg_n;
   pc = 0;
 
@@ -389,29 +391,29 @@ void exec() {
       break;
     }
     case PRINT: {
-      print_register(r);
+      print_register();
       break;
     }
     case CLS: {
-      clear_screen(r);
+      clear_screen();
       break;
     }
     case REG_OP_REG: {
-      assign_register_to_register(r);
+      assign_register_to_register();
       break;
     }
     case IF_REG_CMP_REG: {
-      if_false_skip_next_instruction(r);
+      if_false_skip_next_instruction();
       break;
     }
     case REG_SET_LIT: {
       reg_n = get_register();
-      r[reg_n] = getNN();
+      registers[reg_n] = getNN();
       break;
     }
     case REG_ADD_LIT: {
       reg_n = get_register();
-      r[reg_n] += getNN();
+      registers[reg_n] += getNN();
       break;
     }
     }
@@ -437,6 +439,7 @@ int main(void) {
 
     ClearBackground(BLUE);
     exec();
+    registers[RT - 1]++;
 
     EndDrawing();
   }
