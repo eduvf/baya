@@ -381,7 +381,6 @@ void if_false_skip_next_instruction() {
 void exec() {
   ins_t o;
   int reg_n;
-  pc = 0;
 
   while ((o = memory[pc++])) {
     switch (o) {
@@ -431,14 +430,16 @@ int main(void) {
   }
   putchar('\n');
 
+  SetTraceLogLevel(LOG_ERROR);
   InitWindow(120, 80, "🫐 baya");
   SetTargetFPS(12);
 
+  pc = 4;
   while (!WindowShouldClose()) {
     BeginDrawing();
 
-    ClearBackground(BLUE);
     exec();
+    pc = 0;
     registers[RT - 1]++;
 
     EndDrawing();
