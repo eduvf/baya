@@ -36,6 +36,7 @@ typedef enum {
   GOTO,           // goto NNN
   PRINT,          // print x
   CLS,            // cls N
+  SPRITE,         // sprite N N (id color)
   REG_OP_REG,     // x o= y
   REG_SET_LIT,    // x = NN
   REG_ADD_LIT,    // x += NN
@@ -78,6 +79,13 @@ void encode_cls(int n) {
   memory[pc++] = CLS;
   memory[pc++] = n & (PALETTE_SIZE - 1);
   pc += 2;
+}
+
+void encode_sprite(int id, int col) {
+  memory[pc++] = SPRITE;
+  memory[pc++] = id;
+  memory[pc++] = col & (PALETTE_SIZE - 1);
+  pc++;
 }
 
 void encode_reg_op_reg(op_t op, reg_t x, reg_t y) {
@@ -242,6 +250,19 @@ void parse_cls() {
   return;
 }
 
+void parse_sprite() {
+  char id;
+  char col;
+
+  next_token();
+  if (is_number(&id) != 0) error("expected sprite id");
+  next_token();
+  if (is_number(&col) != 0) error("expected literal color");
+
+  encode_sprite(id, col);
+  return;
+}
+
 void parse_label() {
   next_token();
   if (label_n == LABEL_MAX) error("too many labels");
@@ -320,6 +341,8 @@ void read_file(char *name) {
       parse_print();
     else if (strcmp(token, "cls") == 0)
       parse_cls();
+    else if (strcmp(token, "sprite") == 0)
+      parse_sprite();
     else if (strcmp(token, "if") == 0)
       parse_if();
     else if (strcmp(token, ":") == 0)
