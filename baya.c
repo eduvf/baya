@@ -391,6 +391,21 @@ void clear_screen() {
   pc += 2;
 }
 
+void draw_sprite() {
+  uint8_t *spr = sprites[getN()];
+  Color col = PALETTE[getN()];
+  int ox = registers[RX - 1];
+  int oy = registers[RY - 1];
+
+  for (size_t x = 0; x < 8; x++)
+    for (size_t y = 0; y < 4; y++)
+      if (spr[y] & (128 >> x)) {
+        DrawPixel(ox + x, oy + y, col);
+      }
+
+  pc++;
+}
+
 void assign_register_to_register() {
   op_t op = memory[pc++];
   int reg_n = get_register();
@@ -437,6 +452,10 @@ void exec() {
     }
     case CLS: {
       clear_screen();
+      break;
+    }
+    case SPRITE: {
+      draw_sprite();
       break;
     }
     case REG_OP_REG: {

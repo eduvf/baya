@@ -63,4 +63,4 @@ goto def
 
 : main
 
-print t
+( print t )
