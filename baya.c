@@ -22,6 +22,8 @@ char label_n = 0;
 char label[LABEL_MAX][TOKEN_LENGTH];
 char label_offset[LABEL_MAX];
 
+uint8_t sprites[64][4];
+char sprites_n = 0;
 char memory[(1 << 12)];
 char pc = 0;
 
@@ -273,6 +275,21 @@ void parse_goto() {
   label_n++;
 }
 
+void parse_tilde() {
+  char ch;
+  uint8_t spr[4] = {0};
+
+  for (size_t i = 0; i < 4; i++) {
+    next_token();
+    for (size_t j = 0; j < 8; j++) {
+      ch = token[j];
+      if (ch == '#') spr[i] |= 128 >> j;
+    }
+    sprites[sprites_n][i] = spr[i];
+  }
+  sprites_n++;
+}
+
 void resolve_gotos() {
   char a, b, c;
   int n;
@@ -309,6 +326,8 @@ void read_file(char *name) {
       parse_label();
     else if (strcmp(token, "goto") == 0)
       parse_goto();
+    else if (strcmp(token, "~") == 0)
+      parse_tilde();
     else
       error("invalid instruction");
   }
