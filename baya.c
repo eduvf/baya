@@ -14,6 +14,8 @@
 #define PALETTE_SIZE 4
 Color PALETTE[] = {BLACK, DARKBROWN, BROWN, BEIGE};
 
+char scale = 6;
+
 FILE *file;
 char token[TOKEN_LENGTH];
 int line = 1;
@@ -400,7 +402,7 @@ void draw_sprite() {
   for (size_t x = 0; x < 8; x++)
     for (size_t y = 0; y < 4; y++)
       if (spr[y] & (128 >> x)) {
-        DrawPixel(ox + x, oy + y, col);
+        DrawRectangle((ox + x) * scale, (oy + y) * scale, scale, scale, col);
       }
 
   pc++;
@@ -492,7 +494,7 @@ int main(void) {
   putchar('\n');
 
   SetTraceLogLevel(LOG_ERROR);
-  InitWindow(120, 80, "🫐 baya");
+  InitWindow(120 * scale, 80 * scale, "🫐 baya");
   SetTargetFPS(12);
 
   pc = 4;
