@@ -4,15 +4,22 @@ test file
 
 :: ( code )
 
-cls 0
+cls 3
 
 x = 0
 y = 0
 sprite 0 0
+
+z = t
+y = 2
+z /= y
+z %= y
+w = 0
+
 x = 8
-sprite 1 0
-x = 16
-sprite 2 0
+y = 0
+if z == w then sprite 1 0
+if z != w then sprite 2 0
 
 :: ( spr )
 

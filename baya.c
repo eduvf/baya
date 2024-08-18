@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "raylib.h"
 
@@ -298,19 +299,21 @@ void parse_goto() {
   label_n++;
 }
 
-void parse_tilde() {
+bool parse_sprite_data() {
   char ch;
   uint8_t spr[4] = {0};
 
   for (size_t i = 0; i < 4; i++) {
-    next_token();
+    if (scan_token() == NULL) return false;
+
     for (size_t j = 0; j < 8; j++) {
       ch = token[j];
-      if (ch == '#') spr[i] |= 128 >> j;
+      if (ch == 'x') spr[i] |= 128 >> j;
     }
     sprites[sprites_n][i] = spr[i];
   }
   sprites_n++;
+  return true;
 }
 
 void resolve_gotos() {
@@ -336,6 +339,12 @@ void read_file(char *name) {
   file = fopen(name, "r");
   if (file == NULL) error("couldn't open file");
 
+  // ignore header
+  while (scan_token() != NULL) {
+    if (strcmp(token, "::") == 0) break;
+  }
+
+  // code section
   while (scan_token() != NULL) {
     if (is_register())
       parse_assign();
@@ -351,14 +360,18 @@ void read_file(char *name) {
       parse_label();
     else if (strcmp(token, "goto") == 0)
       parse_goto();
-    else if (strcmp(token, "~") == 0)
-      parse_tilde();
+    else if (strcmp(token, "::") == 0)
+      break;
     else
       error("invalid instruction");
   }
   encode_halt();
 
   resolve_gotos();
+
+  // process sprites
+  while (parse_sprite_data())
+    ;
 
   fclose(file);
 }
@@ -497,7 +510,7 @@ int main(void) {
   InitWindow(120 * scale, 80 * scale, "🫐 baya");
   SetTargetFPS(12);
 
-  pc = 4;
+  // pc = 4; // ignore first instruction
   while (!WindowShouldClose()) {
     BeginDrawing();
 
