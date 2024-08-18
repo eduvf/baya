@@ -1,66 +1,32 @@
-goto main
+baya
 
-( comment )
+test file
 
-x = t
-y = 5
-x %= y
-w = 0
+:: ( code )
 
-cls 3
-( if x == w then cls 2 )
-
-~
-  .##.....
-  #..##..#
-  .....##.
-  ........
-
-~
-  ..#.....
-  #####...
-  ..#.....
-  .#.#....
-
-~
-  .##.....
-  #..#....
-  #..#....
-  .##.....
+cls 0
 
 x = 0
 y = 0
 sprite 0 0
 x = 8
-sprite 1 1
+sprite 1 0
 x = 16
-sprite 2 2
+sprite 2 0
 
-x = 1
-y = 1
-z = 5
+:: ( spr )
 
-( add 1 to loop correctly )
-z += 1
+..x.....
+xxxxx...
+..x.....
+.x.x....
 
-: loop
-  x *= y
-  y += 1
-  if y != z then goto loop
+..xxxx..
+.x.xx.x.
+..xxxx..
+.x....x.
 
-print x
-print y
-print z
-
-goto abc
-goto abc
-: def
-goto end
-goto end
-: abc
-goto def
-: end
-
-: main
-
-( print t )
+..xxxx..
+.x.xx.x.
+..xxxx..
+..x..x..
