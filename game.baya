@@ -17,7 +17,13 @@ z %= y
 w = 0
 
 x = 8
-y = 0
+y = 8
+
+key left then x += -1
+key right then x += 1
+key up then y += -1
+key down then y += 1
+
 if z == w then sprite 1 0
 if z != w then sprite 2 0
 

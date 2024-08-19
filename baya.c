@@ -34,6 +34,8 @@ char pc = 0;
 char registers[REGISTER_N];
 typedef enum { RX = 1, RY, RZ, RW, RT } reg_t;
 
+typedef enum { KZ = 1, KX, KUP, KDOWN, KLEFT, KRIGHT } keys_t;
+
 typedef enum {
   HALT = 1,
   GOTO,           // goto NNN
@@ -44,6 +46,7 @@ typedef enum {
   REG_SET_LIT,    // x = NN
   REG_ADD_LIT,    // x += NN
   IF_REG_CMP_REG, // if x c y then
+  IF_KEY,         // key K then
 } ins_t;
 
 typedef enum {
@@ -119,6 +122,12 @@ void encode_if_reg_cmp_reg(cmp_t cmp, reg_t x, reg_t y) {
   memory[pc++] = y;
 }
 
+void encode_if_key(keys_t key) {
+  memory[pc++] = IF_KEY;
+  memory[pc++] = key;
+  pc += 2;
+}
+
 char is_number(char *n) {
   *n = (char)strtol(token, NULL, 0);
   return errno;
@@ -135,6 +144,16 @@ reg_t is_register() {
   if (strcmp(token, "z") == 0) return RZ;
   if (strcmp(token, "w") == 0) return RW;
   if (strcmp(token, "t") == 0) return RT;
+  return 0;
+}
+
+keys_t is_key() {
+  if (strcmp(token, "z") == 0) return KZ;
+  if (strcmp(token, "x") == 0) return KX;
+  if (strcmp(token, "up") == 0) return KUP;
+  if (strcmp(token, "down") == 0) return KDOWN;
+  if (strcmp(token, "left") == 0) return KLEFT;
+  if (strcmp(token, "right") == 0) return KRIGHT;
   return 0;
 }
 
@@ -227,6 +246,19 @@ void parse_if() {
   } else {
     error("<< TODO >>");
   }
+
+  next_token();
+  if (strcmp(token, "then") != 0) error("expected \"then\"");
+  return;
+}
+
+void parse_if_key() {
+  keys_t key;
+
+  next_token();
+  if (!(key = is_key())) error("expected key in condition");
+
+  encode_if_key(key);
 
   next_token();
   if (strcmp(token, "then") != 0) error("expected \"then\"");
@@ -356,6 +388,8 @@ void read_file(char *name) {
       parse_sprite();
     else if (strcmp(token, "if") == 0)
       parse_if();
+    else if (strcmp(token, "key") == 0)
+      parse_if_key();
     else if (strcmp(token, ":") == 0)
       parse_label();
     else if (strcmp(token, "goto") == 0)
@@ -450,6 +484,32 @@ void if_false_skip_next_instruction() {
   }
 }
 
+void if_not_key_skip_next_instruction() {
+  keys_t key = memory[pc++];
+  pc += 2;
+
+  switch (key) {
+  case KZ:
+    if (!IsKeyDown(KEY_Z)) pc += 4;
+    break;
+  case KX:
+    if (!IsKeyDown(KEY_X)) pc += 4;
+    break;
+  case KUP:
+    if (!IsKeyDown(KEY_UP)) pc += 4;
+    break;
+  case KDOWN:
+    if (!IsKeyDown(KEY_DOWN)) pc += 4;
+    break;
+  case KLEFT:
+    if (!IsKeyDown(KEY_LEFT)) pc += 4;
+    break;
+  case KRIGHT:
+    if (!IsKeyDown(KEY_RIGHT)) pc += 4;
+    break;
+  }
+}
+
 void exec() {
   ins_t o;
   int reg_n;
@@ -479,6 +539,10 @@ void exec() {
     }
     case IF_REG_CMP_REG: {
       if_false_skip_next_instruction();
+      break;
+    }
+    case IF_KEY: {
+      if_not_key_skip_next_instruction();
       break;
     }
     case REG_SET_LIT: {
