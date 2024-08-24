@@ -9,6 +9,8 @@
 
 #include "raylib.h"
 
+#define SCREEN_WIDTH 64
+#define SCREEN_HEIGHT 32
 #define TOKEN_LENGTH 16
 #define LABEL_MAX 64
 
@@ -571,7 +573,7 @@ int main(void) {
   putchar('\n');
 
   SetTraceLogLevel(LOG_ERROR);
-  InitWindow(120 * scale, 80 * scale, "🫐 baya");
+  InitWindow(SCREEN_WIDTH * scale, SCREEN_HEIGHT * scale, "🫐 baya");
   SetTargetFPS(12);
 
   // pc = 4; // ignore first instruction
