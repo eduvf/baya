@@ -36,7 +36,7 @@ char pc = 0;
 char registers[REGISTER_N];
 typedef enum { RX = 1, RY, RZ, RW, RT } reg_t;
 
-typedef enum { KZ = 1, KX, KUP, KDOWN, KLEFT, KRIGHT } keys_t;
+typedef enum { KACTION = 1, KUP, KDOWN, KLEFT, KRIGHT } keys_t;
 
 typedef enum {
   HALT = 1,
@@ -150,8 +150,7 @@ reg_t is_register() {
 }
 
 keys_t is_key() {
-  if (strcmp(token, "z") == 0) return KZ;
-  if (strcmp(token, "x") == 0) return KX;
+  if (strcmp(token, "action") == 0) return KACTION;
   if (strcmp(token, "up") == 0) return KUP;
   if (strcmp(token, "down") == 0) return KDOWN;
   if (strcmp(token, "left") == 0) return KLEFT;
@@ -491,11 +490,8 @@ void if_not_key_skip_next_instruction() {
   pc += 2;
 
   switch (key) {
-  case KZ:
-    if (!(IsKeyDown(KEY_Z) || IsKeyDown(KEY_J))) pc += 4;
-    break;
-  case KX:
-    if (!(IsKeyDown(KEY_X) || IsKeyDown(KEY_K))) pc += 4;
+  case KACTION:
+    if (!(IsKeyDown(KEY_SPACE) || IsKeyDown(KEY_ENTER))) pc += 4;
     break;
   case KUP:
     if (!(IsKeyDown(KEY_UP) || IsKeyDown(KEY_W))) pc += 4;
