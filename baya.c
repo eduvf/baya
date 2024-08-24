@@ -490,22 +490,22 @@ void if_not_key_skip_next_instruction() {
 
   switch (key) {
   case KZ:
-    if (!IsKeyDown(KEY_Z)) pc += 4;
+    if (!(IsKeyDown(KEY_Z) || IsKeyDown(KEY_J))) pc += 4;
     break;
   case KX:
-    if (!IsKeyDown(KEY_X)) pc += 4;
+    if (!(IsKeyDown(KEY_X) || IsKeyDown(KEY_K))) pc += 4;
     break;
   case KUP:
-    if (!IsKeyDown(KEY_UP)) pc += 4;
+    if (!(IsKeyDown(KEY_UP) || IsKeyDown(KEY_W))) pc += 4;
     break;
   case KDOWN:
-    if (!IsKeyDown(KEY_DOWN)) pc += 4;
+    if (!(IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S))) pc += 4;
     break;
   case KLEFT:
-    if (!IsKeyDown(KEY_LEFT)) pc += 4;
+    if (!(IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A))) pc += 4;
     break;
   case KRIGHT:
-    if (!IsKeyDown(KEY_RIGHT)) pc += 4;
+    if (!(IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D))) pc += 4;
     break;
   }
 }
