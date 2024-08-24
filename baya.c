@@ -15,7 +15,7 @@
 #define LABEL_MAX 64
 
 #define PALETTE_SIZE 4
-Color PALETTE[] = {BLACK, DARKBROWN, BROWN, BEIGE};
+Color PALETTE[] = {WHITE, SKYBLUE, BLUE, DARKBLUE};
 
 char scale = 6;
 

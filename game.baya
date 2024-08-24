@@ -24,8 +24,8 @@ key right then x += 1
 key up then y += -1
 key down then y += 1
 
-if z == w then sprite 1 0
-if z != w then sprite 2 0
+if z == w then sprite 1 1
+if z != w then sprite 2 1
 
 :: ( spr )
 
