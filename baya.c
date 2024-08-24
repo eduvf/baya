@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <time.h>
 
 #include "raylib.h"
@@ -17,23 +18,23 @@
 #define PALETTE_SIZE 4
 Color PALETTE[] = {WHITE, SKYBLUE, BLUE, DARKBLUE};
 
-char scale = 6;
+uint8_t scale = 6;
 
 FILE *file;
 char token[TOKEN_LENGTH];
-int line = 1;
+uint8_t line = 1;
 
-char label_n = 0;
+uint8_t label_n = 0;
 char label[LABEL_MAX][TOKEN_LENGTH];
-char label_offset[LABEL_MAX];
+uint16_t label_offset[LABEL_MAX];
 
 uint8_t sprites[64][4];
-char sprites_n = 0;
-char memory[(1 << 12)];
-char pc = 0;
+uint8_t sprites_n = 0;
+uint8_t memory[(1 << 12)];
+uint16_t pc = 0;
 
 #define REGISTER_N 5
-char registers[REGISTER_N];
+uint8_t registers[REGISTER_N];
 typedef enum { RX = 1, RY, RZ, RW, RT } reg_t;
 
 typedef enum { KACTION = 1, KUP, KDOWN, KLEFT, KRIGHT } keys_t;
@@ -70,7 +71,7 @@ void encode_halt() {
   pc += 3;
 }
 
-void encode_goto(int n) {
+void encode_goto(uint16_t n) {
   memory[pc++] = GOTO;
   memory[pc++] = (n & 0xf00) >> 8;
   memory[pc++] = (n & 0xf0) >> 4;
@@ -83,13 +84,13 @@ void encode_print(reg_t r) {
   pc += 2;
 }
 
-void encode_cls(int n) {
+void encode_cls(uint8_t n) {
   memory[pc++] = CLS;
   memory[pc++] = n & (PALETTE_SIZE - 1);
   pc += 2;
 }
 
-void encode_sprite(int id, int col) {
+void encode_sprite(uint8_t id, uint8_t col) {
   memory[pc++] = SPRITE;
   memory[pc++] = id;
   memory[pc++] = col & (PALETTE_SIZE - 1);
@@ -103,14 +104,14 @@ void encode_reg_op_reg(op_t op, reg_t x, reg_t y) {
   memory[pc++] = y;
 }
 
-void encode_reg_set_lit(reg_t r, int n) {
+void encode_reg_set_lit(reg_t r, uint8_t n) {
   memory[pc++] = REG_SET_LIT;
   memory[pc++] = r;
   memory[pc++] = (n & 0xf0) >> 4;
   memory[pc++] = (n & 0xf);
 }
 
-void encode_reg_add_lit(reg_t r, int n) {
+void encode_reg_add_lit(reg_t r, uint8_t n) {
   memory[pc++] = REG_ADD_LIT;
   memory[pc++] = r;
   memory[pc++] = (n & 0xf0) >> 4;
@@ -130,7 +131,7 @@ void encode_if_key(keys_t key) {
   pc += 2;
 }
 
-char is_number(char *n) {
+char is_number(uint8_t *n) {
   *n = (char)strtol(token, NULL, 0);
   return errno;
 }
@@ -176,7 +177,7 @@ cmp_t is_compare() {
 
 char *scan_token() {
   char c;
-  char i = 0;
+  uint8_t i = 0;
   bool comment = false;
 
   while ((c = fgetc(file)) != EOF) {
@@ -206,7 +207,7 @@ void parse_assign() {
   reg_t reg_to;
   reg_t reg_from;
   op_t op;
-  char num;
+  uint8_t num;
 
   reg_to = is_register();
   next_token();
@@ -233,7 +234,7 @@ void parse_if() {
   reg_t reg_lhs;
   reg_t reg_rhs;
   cmp_t cmp;
-  char num;
+  uint8_t num;
 
   next_token();
   if (!(reg_lhs = is_register())) error("expected register in condition");
@@ -277,7 +278,7 @@ void parse_print() {
 }
 
 void parse_cls() {
-  char col;
+  uint8_t col;
 
   next_token();
   if (is_number(&col) != 0) error("expected literal color");
@@ -287,8 +288,8 @@ void parse_cls() {
 }
 
 void parse_sprite() {
-  char id;
-  char col;
+  uint8_t id;
+  uint8_t col;
 
   next_token();
   if (is_number(&id) != 0) error("expected sprite id");
@@ -350,10 +351,10 @@ bool parse_sprite_data() {
 }
 
 void resolve_gotos() {
-  char a, b, c;
-  int n;
+  uint8_t a, b, c;
+  uint16_t n;
 
-  for (int i = 0; i < pc; i += 4) {
+  for (uint8_t i = 0; i < pc; i += 4) {
     if (memory[i] == GOTO) {
       a = memory[i + 1];
       b = memory[i + 2];
@@ -411,23 +412,23 @@ void read_file(char *name) {
   fclose(file);
 }
 
-int get_register() {
-  char c = memory[pc++];
+uint8_t get_register() {
+  uint8_t c = memory[pc++];
   return c - 1;
 }
 
-int getN() { return memory[pc++]; }
+uint8_t getN() { return memory[pc++]; }
 
-int getNN() {
-  char a = memory[pc++];
-  char b = memory[pc++];
+uint8_t getNN() {
+  uint8_t a = memory[pc++];
+  uint8_t b = memory[pc++];
   return a * 0x10 + b;
 }
 
-int getNNN() {
-  char a = memory[pc++];
-  char b = memory[pc++];
-  char c = memory[pc++];
+uint16_t getNNN() {
+  uint8_t a = memory[pc++];
+  uint8_t b = memory[pc++];
+  uint8_t c = memory[pc++];
   return a * 0x100 + b * 0x10 + c;
 }
 
@@ -444,8 +445,8 @@ void clear_screen() {
 void draw_sprite() {
   uint8_t *spr = sprites[getN()];
   Color col = PALETTE[getN()];
-  int ox = registers[RX - 1];
-  int oy = registers[RY - 1];
+  uint8_t ox = registers[RX - 1];
+  uint8_t oy = registers[RY - 1];
 
   for (size_t x = 0; x < 8; x++)
     for (size_t y = 0; y < 4; y++)
@@ -458,7 +459,7 @@ void draw_sprite() {
 
 void assign_register_to_register() {
   op_t op = memory[pc++];
-  int reg_n = get_register();
+  uint8_t reg_n = get_register();
 
   switch (op) {
   case SET: registers[reg_n] = registers[get_register()]; break;
@@ -472,8 +473,8 @@ void assign_register_to_register() {
 
 void if_false_skip_next_instruction() {
   cmp_t cmp = memory[pc++];
-  int a = registers[get_register()];
-  int b = registers[get_register()];
+  uint8_t a = registers[get_register()];
+  uint8_t b = registers[get_register()];
 
   switch (cmp) {
   case EQ:
@@ -510,7 +511,7 @@ void if_not_key_skip_next_instruction() {
 
 void exec() {
   ins_t o;
-  int reg_n;
+  uint8_t reg_n;
 
   while ((o = memory[pc++])) {
     switch (o) {
