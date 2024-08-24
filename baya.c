@@ -53,6 +53,8 @@ typedef enum {
   REG_SET_LIT,    // x = NN
   REG_ADD_LIT,    // x += NN
   IF_REG_CMP_REG, // if x c y then
+  IF_REG_EQ_LIT,  // if x == NN then
+  IF_REG_NE_LIT,  // if x != NN then
   IF_KEY,         // key K then
 } ins_t;
 
@@ -129,6 +131,20 @@ void encode_if_reg_cmp_reg(cmp_t cmp, reg_t x, reg_t y) {
   mem[pc++] = cmp;
   mem[pc++] = x;
   mem[pc++] = y;
+}
+
+void encode_if_reg_eq_lit(reg_t r, uint8_t n) {
+  mem[pc++] = IF_REG_EQ_LIT;
+  mem[pc++] = r;
+  mem[pc++] = (n & 0xf0) >> 4;
+  mem[pc++] = (n & 0xf);
+}
+
+void encode_if_reg_ne_lit(reg_t r, uint8_t n) {
+  mem[pc++] = IF_REG_NE_LIT;
+  mem[pc++] = r;
+  mem[pc++] = (n & 0xf0) >> 4;
+  mem[pc++] = (n & 0xf);
 }
 
 void encode_if_key(keys_t key) {
@@ -231,10 +247,10 @@ void parse_assign() {
     return;
   }
 
-  if (!(op == EQ || op == NE)) error("unexpected comparison operation");
+  if (!(op == SET || op == ADD)) error("unexpected assignment operation");
   if (is_number(&num) != 0) error("invalid number");
 
-  if (op == EQ)
+  if (op == SET)
     encode_reg_set_lit(reg_to, num);
   else
     encode_reg_add_lit(reg_to, num);
@@ -255,8 +271,15 @@ void parse_if() {
   next_token();
   if ((reg_rhs = is_register()))
     encode_if_reg_cmp_reg(cmp, reg_lhs, reg_rhs);
-  else
-    error("<< TODO >>");
+  else {
+    if (!(cmp == EQ || cmp == NE)) error("unexpected comparison operator");
+    if (is_number(&num) != 0) error("invalid number");
+
+    if (cmp == EQ)
+      encode_if_reg_eq_lit(reg_lhs, num);
+    else
+      encode_if_reg_ne_lit(reg_lhs, num);
+  }
 
   next_token();
   if (strcmp(token, "then") != 0) error("expected \"then\"");
@@ -493,7 +516,7 @@ void assign_register_to_register() {
   }
 }
 
-void if_false_skip_next_instruction() {
+void if_reg_cmp_reg_is_false_skip_next_instruction() {
   cmp_t cmp = mem[pc++];
   uint8_t a = regs[get_reg()];
   uint8_t b = regs[get_reg()];
@@ -506,6 +529,20 @@ void if_false_skip_next_instruction() {
     if (!(a != b)) pc += 4;
     break;
   }
+}
+
+void if_reg_eq_lit_is_false_skip_next_instruction() {
+  uint8_t r_val = regs[get_reg()];
+  uint8_t n = get_NN();
+
+  if (!(r_val == n)) pc += 4;
+}
+
+void if_reg_ne_lit_is_false_skip_next_instruction() {
+  uint8_t r_val = regs[get_reg()];
+  uint8_t n = get_NN();
+
+  if (!(r_val != n)) pc += 4;
 }
 
 void if_not_key_skip_next_instruction() {
@@ -557,7 +594,13 @@ void exec() {
       assign_register_to_register();
       break;
     case IF_REG_CMP_REG:
-      if_false_skip_next_instruction();
+      if_reg_cmp_reg_is_false_skip_next_instruction();
+      break;
+    case IF_REG_EQ_LIT:
+      if_reg_eq_lit_is_false_skip_next_instruction();
+      break;
+    case IF_REG_NE_LIT:
+      if_reg_ne_lit_is_false_skip_next_instruction();
       break;
     case IF_KEY:
       if_not_key_skip_next_instruction();

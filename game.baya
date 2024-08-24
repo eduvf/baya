@@ -14,7 +14,6 @@ z = t
 y = 2
 z /= y
 z %= y
-w = 0
 
 x = 8
 y = 8
@@ -24,8 +23,8 @@ key right then x += 1
 key up then y += -1
 key down then y += 1
 
-if z == w then sprite 1 1
-if z != w then sprite 2 1
+if z == 0 then sprite 1 1
+if z != 0 then sprite 2 1
 
 :: ( spr )
 
