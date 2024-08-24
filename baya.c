@@ -24,17 +24,21 @@ FILE *file;
 char token[TOKEN_LENGTH];
 uint8_t line = 1;
 
-uint8_t label_n = 0;
 char label[LABEL_MAX][TOKEN_LENGTH];
+uint8_t label_n = 0;
 uint16_t label_offset[LABEL_MAX];
 
 uint8_t sprites[64][4];
 uint8_t sprites_n = 0;
-uint8_t memory[(1 << 12)];
+uint8_t mem[(1 << 12)];
 uint16_t pc = 0;
 
 #define REGISTER_N 5
-uint8_t registers[REGISTER_N];
+uint8_t regs[REGISTER_N];
+
+/* ENUMS */
+/* starting at 1, because 0 represents an invalid token */
+
 typedef enum { RX = 1, RY, RZ, RW, RT } reg_t;
 
 typedef enum { KACTION = 1, KUP, KDOWN, KLEFT, KRIGHT } keys_t;
@@ -66,79 +70,83 @@ typedef enum {
   NE      // !=
 } cmp_t;
 
+/* ENCODERS */
+
 void encode_halt() {
-  memory[pc++] = HALT;
+  mem[pc++] = HALT;
   pc += 3;
 }
 
 void encode_goto(uint16_t n) {
-  memory[pc++] = GOTO;
-  memory[pc++] = (n & 0xf00) >> 8;
-  memory[pc++] = (n & 0xf0) >> 4;
-  memory[pc++] = (n & 0xf);
+  mem[pc++] = GOTO;
+  mem[pc++] = (n & 0xf00) >> 8;
+  mem[pc++] = (n & 0xf0) >> 4;
+  mem[pc++] = (n & 0xf);
 }
 
 void encode_print(reg_t r) {
-  memory[pc++] = PRINT;
-  memory[pc++] = r;
+  mem[pc++] = PRINT;
+  mem[pc++] = r;
   pc += 2;
 }
 
 void encode_cls(uint8_t n) {
-  memory[pc++] = CLS;
-  memory[pc++] = n & (PALETTE_SIZE - 1);
+  mem[pc++] = CLS;
+  mem[pc++] = n & (PALETTE_SIZE - 1);
   pc += 2;
 }
 
 void encode_sprite(uint8_t id, uint8_t col) {
-  memory[pc++] = SPRITE;
-  memory[pc++] = id;
-  memory[pc++] = col & (PALETTE_SIZE - 1);
+  mem[pc++] = SPRITE;
+  mem[pc++] = id;
+  mem[pc++] = col & (PALETTE_SIZE - 1);
   pc++;
 }
 
 void encode_reg_op_reg(op_t op, reg_t x, reg_t y) {
-  memory[pc++] = REG_OP_REG;
-  memory[pc++] = op;
-  memory[pc++] = x;
-  memory[pc++] = y;
+  mem[pc++] = REG_OP_REG;
+  mem[pc++] = op;
+  mem[pc++] = x;
+  mem[pc++] = y;
 }
 
 void encode_reg_set_lit(reg_t r, uint8_t n) {
-  memory[pc++] = REG_SET_LIT;
-  memory[pc++] = r;
-  memory[pc++] = (n & 0xf0) >> 4;
-  memory[pc++] = (n & 0xf);
+  mem[pc++] = REG_SET_LIT;
+  mem[pc++] = r;
+  mem[pc++] = (n & 0xf0) >> 4;
+  mem[pc++] = (n & 0xf);
 }
 
 void encode_reg_add_lit(reg_t r, uint8_t n) {
-  memory[pc++] = REG_ADD_LIT;
-  memory[pc++] = r;
-  memory[pc++] = (n & 0xf0) >> 4;
-  memory[pc++] = (n & 0xf);
+  mem[pc++] = REG_ADD_LIT;
+  mem[pc++] = r;
+  mem[pc++] = (n & 0xf0) >> 4;
+  mem[pc++] = (n & 0xf);
 }
 
 void encode_if_reg_cmp_reg(cmp_t cmp, reg_t x, reg_t y) {
-  memory[pc++] = IF_REG_CMP_REG;
-  memory[pc++] = cmp;
-  memory[pc++] = x;
-  memory[pc++] = y;
+  mem[pc++] = IF_REG_CMP_REG;
+  mem[pc++] = cmp;
+  mem[pc++] = x;
+  mem[pc++] = y;
 }
 
 void encode_if_key(keys_t key) {
-  memory[pc++] = IF_KEY;
-  memory[pc++] = key;
+  mem[pc++] = IF_KEY;
+  mem[pc++] = key;
   pc += 2;
+}
+
+/* ERROR AND CHECKS */
+
+void error(const char *msg) {
+  printf("ERROR AROUND LINE %d: %s\n", line, msg);
+  exit(1);
 }
 
 char is_number(uint8_t *n) {
   *n = (char)strtol(token, NULL, 0);
   return errno;
-}
-
-void error(const char *msg) {
-  printf("ERROR AROUND LINE %d: %s\n", line, msg);
-  exit(1);
 }
 
 reg_t is_register() {
@@ -175,6 +183,8 @@ cmp_t is_compare() {
   return 0;
 }
 
+/* FILE PARSER */
+
 char *scan_token() {
   char c;
   uint8_t i = 0;
@@ -203,6 +213,8 @@ void next_token() {
   error("missing token");
 }
 
+/* STATEMENTS PARSER */
+
 void parse_assign() {
   reg_t reg_to;
   reg_t reg_from;
@@ -219,15 +231,13 @@ void parse_assign() {
     return;
   }
 
-  if (!(op == EQ || op == NE))
-    error("unexpected operation between register and literal");
+  if (!(op == EQ || op == NE)) error("unexpected comparison operation");
   if (is_number(&num) != 0) error("invalid number");
 
   if (op == EQ)
     encode_reg_set_lit(reg_to, num);
   else
     encode_reg_add_lit(reg_to, num);
-  return;
 }
 
 void parse_if() {
@@ -243,15 +253,13 @@ void parse_if() {
   if (!(cmp = is_compare())) error("expected comparison");
 
   next_token();
-  if ((reg_rhs = is_register())) {
+  if ((reg_rhs = is_register()))
     encode_if_reg_cmp_reg(cmp, reg_lhs, reg_rhs);
-  } else {
+  else
     error("<< TODO >>");
-  }
 
   next_token();
   if (strcmp(token, "then") != 0) error("expected \"then\"");
-  return;
 }
 
 void parse_if_key() {
@@ -264,7 +272,6 @@ void parse_if_key() {
 
   next_token();
   if (strcmp(token, "then") != 0) error("expected \"then\"");
-  return;
 }
 
 void parse_print() {
@@ -274,7 +281,6 @@ void parse_print() {
   if (!(reg = is_register())) error("expected register to print");
 
   encode_print(reg);
-  return;
 }
 
 void parse_cls() {
@@ -284,7 +290,6 @@ void parse_cls() {
   if (is_number(&col) != 0) error("expected literal color");
 
   encode_cls(col);
-  return;
 }
 
 void parse_sprite() {
@@ -297,7 +302,6 @@ void parse_sprite() {
   if (is_number(&col) != 0) error("expected literal color");
 
   encode_sprite(id, col);
-  return;
 }
 
 void parse_label() {
@@ -350,33 +354,36 @@ bool parse_sprite_data() {
   return true;
 }
 
+/* PROCESS BYTECODE */
+
 void resolve_gotos() {
   uint8_t a, b, c;
   uint16_t n;
 
   for (uint8_t i = 0; i < pc; i += 4) {
-    if (memory[i] == GOTO) {
-      a = memory[i + 1];
-      b = memory[i + 2];
-      c = memory[i + 3];
+    if (mem[i] == GOTO) {
+      a = mem[i + 1];
+      b = mem[i + 2];
+      c = mem[i + 3];
 
       n = label_offset[(a << 8) | (b << 4) | c];
 
-      memory[i + 1] = (n & 0xf00) >> 8;
-      memory[i + 2] = (n & 0xf0) >> 4;
-      memory[i + 3] = (n & 0xf);
+      mem[i + 1] = (n & 0xf00) >> 8;
+      mem[i + 2] = (n & 0xf0) >> 4;
+      mem[i + 3] = (n & 0xf);
     }
   }
 }
+
+/* READER */
 
 void read_file(char *name) {
   file = fopen(name, "r");
   if (file == NULL) error("couldn't open file");
 
   // ignore header
-  while (scan_token() != NULL) {
+  while (scan_token() != NULL)
     if (strcmp(token, "::") == 0) break;
-  }
 
   // code section
   while (scan_token() != NULL) {
@@ -412,69 +419,84 @@ void read_file(char *name) {
   fclose(file);
 }
 
-uint8_t get_register() {
-  uint8_t c = memory[pc++];
+/* GET FROM MEMORY */
+
+uint8_t get_reg() {
+  uint8_t c = mem[pc++];
   return c - 1;
 }
 
-uint8_t getN() { return memory[pc++]; }
+uint8_t get_N() { return mem[pc++]; }
 
-uint8_t getNN() {
-  uint8_t a = memory[pc++];
-  uint8_t b = memory[pc++];
+uint8_t get_NN() {
+  uint8_t a = mem[pc++];
+  uint8_t b = mem[pc++];
   return a * 0x10 + b;
 }
 
-uint16_t getNNN() {
-  uint8_t a = memory[pc++];
-  uint8_t b = memory[pc++];
-  uint8_t c = memory[pc++];
+uint16_t get_NNN() {
+  uint8_t a = mem[pc++];
+  uint8_t b = mem[pc++];
+  uint8_t c = mem[pc++];
   return a * 0x100 + b * 0x10 + c;
 }
 
+/* EXECUTION FUNCTIONS */
+
 void print_register() {
-  printf("%d\n", registers[get_register()]);
+  printf("%d\n", regs[get_reg()]);
   pc += 2;
 }
 
 void clear_screen() {
-  ClearBackground(PALETTE[getN()]);
+  ClearBackground(PALETTE[get_N()]);
   pc += 2;
 }
 
 void draw_sprite() {
-  uint8_t *spr = sprites[getN()];
-  Color col = PALETTE[getN()];
-  uint8_t ox = registers[RX - 1];
-  uint8_t oy = registers[RY - 1];
+  uint8_t *spr = sprites[get_N()];
+  Color col = PALETTE[get_N()];
+  uint8_t ox = regs[RX - 1];
+  uint8_t oy = regs[RY - 1];
 
   for (size_t x = 0; x < 8; x++)
     for (size_t y = 0; y < 4; y++)
-      if (spr[y] & (128 >> x)) {
+      if (spr[y] & (128 >> x))
         DrawRectangle((ox + x) * scale, (oy + y) * scale, scale, scale, col);
-      }
 
   pc++;
 }
 
 void assign_register_to_register() {
-  op_t op = memory[pc++];
-  uint8_t reg_n = get_register();
+  op_t op = mem[pc++];
+  uint8_t reg_n = get_reg();
 
   switch (op) {
-  case SET: registers[reg_n] = registers[get_register()]; break;
-  case ADD: registers[reg_n] += registers[get_register()]; break;
-  case SUB: registers[reg_n] -= registers[get_register()]; break;
-  case MUL: registers[reg_n] *= registers[get_register()]; break;
-  case DIV: registers[reg_n] /= registers[get_register()]; break;
-  case MOD: registers[reg_n] %= registers[get_register()]; break;
+  case SET:
+    regs[reg_n] = regs[get_reg()];
+    break;
+  case ADD:
+    regs[reg_n] += regs[get_reg()];
+    break;
+  case SUB:
+    regs[reg_n] -= regs[get_reg()];
+    break;
+  case MUL:
+    regs[reg_n] *= regs[get_reg()];
+    break;
+  case DIV:
+    regs[reg_n] /= regs[get_reg()];
+    break;
+  case MOD:
+    regs[reg_n] %= regs[get_reg()];
+    break;
   }
 }
 
 void if_false_skip_next_instruction() {
-  cmp_t cmp = memory[pc++];
-  uint8_t a = registers[get_register()];
-  uint8_t b = registers[get_register()];
+  cmp_t cmp = mem[pc++];
+  uint8_t a = regs[get_reg()];
+  uint8_t b = regs[get_reg()];
 
   switch (cmp) {
   case EQ:
@@ -487,7 +509,7 @@ void if_false_skip_next_instruction() {
 }
 
 void if_not_key_skip_next_instruction() {
-  keys_t key = memory[pc++];
+  keys_t key = mem[pc++];
   pc += 2;
 
   switch (key) {
@@ -509,58 +531,55 @@ void if_not_key_skip_next_instruction() {
   }
 }
 
+/* EXECUTION */
+
 void exec() {
   ins_t o;
   uint8_t reg_n;
 
-  while ((o = memory[pc++])) {
+  while ((o = mem[pc++])) {
     switch (o) {
-    case HALT: return;
-    case GOTO: {
-      pc = getNNN();
+    case HALT:
+      return;
+    case GOTO:
+      pc = get_NNN();
       break;
-    }
-    case PRINT: {
+    case PRINT:
       print_register();
       break;
-    }
-    case CLS: {
+    case CLS:
       clear_screen();
       break;
-    }
-    case SPRITE: {
+    case SPRITE:
       draw_sprite();
       break;
-    }
-    case REG_OP_REG: {
+    case REG_OP_REG:
       assign_register_to_register();
       break;
-    }
-    case IF_REG_CMP_REG: {
+    case IF_REG_CMP_REG:
       if_false_skip_next_instruction();
       break;
-    }
-    case IF_KEY: {
+    case IF_KEY:
       if_not_key_skip_next_instruction();
       break;
-    }
-    case REG_SET_LIT: {
-      reg_n = get_register();
-      registers[reg_n] = getNN();
+    case REG_SET_LIT:
+      reg_n = get_reg();
+      regs[reg_n] = get_NN();
       break;
-    }
-    case REG_ADD_LIT: {
-      reg_n = get_register();
-      registers[reg_n] += getNN();
+    case REG_ADD_LIT:
+      reg_n = get_reg();
+      regs[reg_n] += get_NN();
       break;
-    }
     }
   }
 }
 
+/* MAIN */
+
 int main(void) {
   read_file("game.baya");
 
+  /*
   for (int i; i < pc; i += 4) {
     printf("%x", memory[i]);
     printf("%x", memory[i + 1]);
@@ -568,18 +587,18 @@ int main(void) {
     printf("%x ", memory[i + 3]);
   }
   putchar('\n');
+  */
 
   SetTraceLogLevel(LOG_ERROR);
   InitWindow(SCREEN_WIDTH * scale, SCREEN_HEIGHT * scale, "🫐 baya");
   SetTargetFPS(12);
 
-  // pc = 4; // ignore first instruction
   while (!WindowShouldClose()) {
     BeginDrawing();
 
     exec();
     pc = 0;
-    registers[RT - 1]++;
+    regs[RT - 1]++;
 
     EndDrawing();
   }
