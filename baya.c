@@ -47,7 +47,7 @@ typedef enum {
   HALT = 1,
   GOTO,           // goto NNN
   PRINT,          // print x
-  CLS,            // cls N
+  CLEAR,          // clear N
   SPRITE,         // sprite N N (id color)
   REG_OP_REG,     // x o= y
   REG_SET_LIT,    // x = NN
@@ -90,8 +90,8 @@ void encode_print(reg_t r) {
   pc += 2;
 }
 
-void encode_cls(uint8_t n) {
-  mem[pc++] = CLS;
+void encode_clear(uint8_t n) {
+  mem[pc++] = CLEAR;
   mem[pc++] = n & (PALETTE_SIZE - 1);
   pc += 2;
 }
@@ -283,13 +283,13 @@ void parse_print() {
   encode_print(reg);
 }
 
-void parse_cls() {
+void parse_clear() {
   uint8_t col;
 
   next_token();
   if (is_number(&col) != 0) error("expected literal color");
 
-  encode_cls(col);
+  encode_clear(col);
 }
 
 void parse_sprite() {
@@ -391,8 +391,8 @@ void read_file(char *name) {
       parse_assign();
     else if (strcmp(token, "print") == 0)
       parse_print();
-    else if (strcmp(token, "cls") == 0)
-      parse_cls();
+    else if (strcmp(token, "clear") == 0)
+      parse_clear();
     else if (strcmp(token, "sprite") == 0)
       parse_sprite();
     else if (strcmp(token, "if") == 0)
@@ -547,7 +547,7 @@ void exec() {
     case PRINT:
       print_register();
       break;
-    case CLS:
+    case CLEAR:
       clear_screen();
       break;
     case SPRITE:
