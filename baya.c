@@ -63,6 +63,7 @@ typedef enum {
   REG_OP_REG,     // x o= y
   REG_SET_LIT,    // x = NN
   REG_ADD_LIT,    // x += NN
+  REG_RANDOM,     // x = random NN
   IF_REG_CMP_REG, // if x c y then
   IF_REG_EQ_LIT,  // if x == NN then
   IF_REG_NE_LIT,  // if x != NN then
@@ -139,6 +140,13 @@ void encode_reg_set_lit(reg_t r, uint8_t n) {
 
 void encode_reg_add_lit(reg_t r, uint8_t n) {
   mem[pc++] = REG_ADD_LIT;
+  mem[pc++] = r;
+  mem[pc++] = (n & 0xf0) >> 4;
+  mem[pc++] = (n & 0xf);
+}
+
+void encode_reg_random(reg_t r, uint8_t n) {
+  mem[pc++] = REG_RANDOM;
   mem[pc++] = r;
   mem[pc++] = (n & 0xf0) >> 4;
   mem[pc++] = (n & 0xf);
@@ -275,6 +283,14 @@ void parse_assign() {
   next_token();
   if ((reg_from = is_register())) {
     encode_reg_op_reg(op, reg_to, reg_from);
+    return;
+  }
+
+  if (op == SET && strcmp(token, "random") == 0) {
+    next_token();
+    if (is_number(&num) != 0) error("invalid number");
+
+    encode_reg_random(reg_to, num);
     return;
   }
 
@@ -664,6 +680,10 @@ void exec() {
     case REG_ADD_LIT:
       reg_n = get_reg();
       regs[reg_n] += get_NN();
+      break;
+    case REG_RANDOM:
+      reg_n = get_reg();
+      regs[reg_n] = (float)rand() / RAND_MAX * get_NN();
       break;
     }
   }
