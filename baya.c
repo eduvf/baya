@@ -83,7 +83,11 @@ typedef enum {
 
 typedef enum {
   EQ = 1, // ==
-  NE      // !=
+  NE,     // !=
+  LT,     // <
+  LE,     // <=
+  GT,     // >
+  GE,     // >=
 } cmp_t;
 
 /* ENCODERS */
@@ -219,6 +223,10 @@ op_t is_operator() {
 cmp_t is_compare() {
   if (strcmp(token, "==") == 0) return EQ;
   if (strcmp(token, "!=") == 0) return NE;
+  if (strcmp(token, "<") == 0) return LT;
+  if (strcmp(token, "<=") == 0) return LE;
+  if (strcmp(token, ">") == 0) return GT;
+  if (strcmp(token, ">=") == 0) return GE;
   return 0;
 }
 
@@ -559,6 +567,18 @@ void if_reg_cmp_reg_is_false_skip_next_instruction() {
     break;
   case NE:
     if (!(a != b)) pc += 4;
+    break;
+  case LT:
+    if (!(a < b)) pc += 4;
+    break;
+  case LE:
+    if (!(a <= b)) pc += 4;
+    break;
+  case GT:
+    if (!(a > b)) pc += 4;
+    break;
+  case GE:
+    if (!(a >= b)) pc += 4;
     break;
   }
 }
