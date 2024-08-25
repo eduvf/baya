@@ -44,13 +44,13 @@ uint8_t sprites_n = 0;
 uint8_t mem[(1 << 12)];
 uint16_t pc = 0;
 
-#define REGISTER_N 5
+#define REGISTER_N 11
 uint8_t regs[REGISTER_N];
 
 /* ENUMS */
 /* starting at 1, because 0 represents an invalid token */
 
-typedef enum { RX = 1, RY, RZ, RW, RT } reg_t;
+typedef enum { RX = 1, RY, RZ, RW, RA, RB, RC, RD, RE, RF, RT } reg_t;
 
 typedef enum { KACTION = 1, KUP, KDOWN, KLEFT, KRIGHT } keys_t;
 
@@ -181,6 +181,12 @@ reg_t is_register() {
   if (strcmp(token, "y") == 0) return RY;
   if (strcmp(token, "z") == 0) return RZ;
   if (strcmp(token, "w") == 0) return RW;
+  if (strcmp(token, "a") == 0) return RA;
+  if (strcmp(token, "b") == 0) return RB;
+  if (strcmp(token, "c") == 0) return RC;
+  if (strcmp(token, "d") == 0) return RD;
+  if (strcmp(token, "e") == 0) return RE;
+  if (strcmp(token, "f") == 0) return RF;
   if (strcmp(token, "t") == 0) return RT;
   return 0;
 }
