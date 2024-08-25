@@ -15,8 +15,19 @@
 #define TOKEN_LENGTH 16
 #define LABEL_MAX 64
 
-#define PALETTE_SIZE 4
-Color PALETTE[] = {WHITE, SKYBLUE, BLUE, DARKBLUE};
+#define PALETTE_SIZE 8
+
+const Color COLOR_BG = {20, 20, 40, 255};
+const Color COLOR_MG = {100, 100, 140, 255};
+const Color COLOR_FG = {180, 180, 190, 255};
+const Color COLOR_ROSE = {200, 50, 50, 255};
+const Color COLOR_WOOD = {180, 120, 50, 255};
+const Color COLOR_SAND = {250, 200, 50, 255};
+const Color COLOR_VINE = {80, 200, 50, 255};
+const Color COLOR_WAVE = {50, 150, 200, 255};
+
+Color PALETTE[] = {COLOR_BG,   COLOR_MG,   COLOR_FG,   COLOR_ROSE,
+                   COLOR_WOOD, COLOR_SAND, COLOR_VINE, COLOR_WAVE};
 
 uint8_t scale = 6;
 

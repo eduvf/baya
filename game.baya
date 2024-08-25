@@ -4,11 +4,11 @@ test file
 
 :: ( code )
 
-clear 3
+clear 0
 
 x = 0
 y = 0
-sprite 0 0
+sprite 0 5
 
 z = t
 y = 2
@@ -23,8 +23,8 @@ key right then x += 1
 key up then y += -1
 key down then y += 1
 
-if z == 0 then sprite 1 1
-if z != 0 then sprite 2 1
+if z == 0 then sprite 1 6
+if z != 0 then sprite 2 6
 
 :: ( spr )
 
