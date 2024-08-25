@@ -39,7 +39,7 @@ char label[LABEL_MAX][TOKEN_LENGTH];
 uint8_t label_n = 0;
 uint16_t label_offset[LABEL_MAX];
 
-uint8_t sprites[64][4];
+uint8_t sprites[16][4];
 uint8_t sprites_n = 0;
 uint8_t mem[(1 << 12)];
 uint16_t pc = 0;
@@ -411,14 +411,14 @@ bool parse_sprite_data() {
   char ch;
   uint8_t spr[4] = {0};
 
-  for (size_t i = 0; i < 4; i++) {
+  for (size_t y = 0; y < 4; y++) {
     if (scan_token() == NULL) return false;
 
-    for (size_t j = 0; j < 8; j++) {
-      ch = token[j];
-      if (ch == 'x') spr[i] |= 128 >> j;
+    for (size_t x = 0; x < 8; x++) {
+      ch = token[x];
+      if (ch == 'x') spr[y] |= 128 >> x;
     }
-    sprites[sprites_n][i] = spr[i];
+    sprites[sprites_n][y] = spr[y];
   }
   sprites_n++;
   return true;
