@@ -75,7 +75,10 @@ typedef enum {
   SUB,     // -=
   MUL,     // *=
   DIV,     // /=
-  MOD      // %=
+  MOD,     // %=
+  AND,     // &=
+  OR,      // |=
+  XOR,     // ^=
 } op_t;
 
 typedef enum {
@@ -207,6 +210,9 @@ op_t is_operator() {
   if (strcmp(token, "*=") == 0) return MUL;
   if (strcmp(token, "/=") == 0) return DIV;
   if (strcmp(token, "%=") == 0) return MOD;
+  if (strcmp(token, "&=") == 0) return AND;
+  if (strcmp(token, "|=") == 0) return OR;
+  if (strcmp(token, "^=") == 0) return XOR;
   return 0;
 }
 
@@ -529,6 +535,15 @@ void assign_register_to_register() {
     break;
   case MOD:
     regs[reg_n] %= regs[get_reg()];
+    break;
+  case AND:
+    regs[reg_n] &= regs[get_reg()];
+    break;
+  case OR:
+    regs[reg_n] |= regs[get_reg()];
+    break;
+  case XOR:
+    regs[reg_n] ^= regs[get_reg()];
     break;
   }
 }
