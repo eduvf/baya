@@ -44,13 +44,13 @@ uint8_t sprites_n = 0;
 uint8_t mem[(1 << 12)];
 uint16_t pc = 0;
 
-#define REGISTER_N 11
+#define REGISTER_N 12
 uint8_t regs[REGISTER_N];
 
 /* ENUMS */
 /* starting at 1, because 0 represents an invalid token */
 
-typedef enum { RX = 1, RY, RZ, RW, RA, RB, RC, RD, RE, RF, RT } reg_t;
+typedef enum { RX = 1, RY, RZ, RW, RA, RB, RC, RD, RE, RF, RT, RCOL } reg_t;
 
 typedef enum { KACTION = 1, KUP, KDOWN, KLEFT, KRIGHT } keys_t;
 
@@ -59,7 +59,8 @@ typedef enum {
   GOTO,           // goto NNN
   PRINT,          // print x
   CLEAR,          // clear N
-  SPRITE,         // sprite N N (id color)
+  COLOR,          // color N
+  SPRITE,         // sprite N (id)
   REG_OP_REG,     // x o= y
   REG_SET_LIT,    // x = NN
   REG_ADD_LIT,    // x += NN
@@ -117,11 +118,16 @@ void encode_clear(uint8_t n) {
   pc += 2;
 }
 
-void encode_sprite(uint8_t id, uint8_t col) {
+void encode_color(uint8_t col) {
+  mem[pc++] = COLOR;
+  mem[pc++] = col & (PALETTE_SIZE - 1);
+  pc += 2;
+}
+
+void encode_sprite(uint8_t id) {
   mem[pc++] = SPRITE;
   mem[pc++] = id;
-  mem[pc++] = col & (PALETTE_SIZE - 1);
-  pc++;
+  pc += 2;
 }
 
 void encode_reg_op_reg(op_t op, reg_t x, reg_t y) {
@@ -362,16 +368,23 @@ void parse_clear() {
   encode_clear(col);
 }
 
+void parse_color() {
+  uint8_t col;
+
+  next_token();
+  if (is_number(&col) != 0) error("expected literal color");
+
+  encode_color(col);
+}
+
 void parse_sprite() {
   uint8_t id;
   uint8_t col;
 
   next_token();
   if (is_number(&id) != 0) error("expected sprite id");
-  next_token();
-  if (is_number(&col) != 0) error("expected literal color");
 
-  encode_sprite(id, col);
+  encode_sprite(id);
 }
 
 void parse_label() {
@@ -463,6 +476,8 @@ void read_file(char *name) {
       parse_print();
     else if (strcmp(token, "clear") == 0)
       parse_clear();
+    else if (strcmp(token, "color") == 0)
+      parse_color();
     else if (strcmp(token, "sprite") == 0)
       parse_sprite();
     else if (strcmp(token, "if") == 0)
@@ -523,9 +538,16 @@ void clear_screen() {
   pc += 2;
 }
 
+void assign_color() {
+  uint8_t col = get_N();
+  regs[RCOL - 1] = col;
+
+  pc += 2;
+}
+
 void draw_sprite() {
   uint8_t *spr = sprites[get_N()];
-  Color col = PALETTE[get_N()];
+  Color col = PALETTE[regs[RCOL - 1]];
   uint8_t ox = regs[RX - 1];
   uint8_t oy = regs[RY - 1];
 
@@ -534,7 +556,7 @@ void draw_sprite() {
       if (spr[y] & (128 >> x))
         DrawRectangle((ox + x) * scale, (oy + y) * scale, scale, scale, col);
 
-  pc++;
+  pc += 2;
 }
 
 void assign_register_to_register() {
@@ -654,6 +676,9 @@ void exec() {
       break;
     case CLEAR:
       clear_screen();
+      break;
+    case COLOR:
+      assign_color();
       break;
     case SPRITE:
       draw_sprite();

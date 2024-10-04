@@ -8,7 +8,8 @@ clear 0
 
 x = 0
 y = 0
-sprite 0 5
+color 5
+sprite 0
 
 z = t
 y = 2
@@ -23,8 +24,9 @@ key right then x += 1
 key up then y += -1
 key down then y += 1
 
-if z == 0 then sprite 1 6
-if z != 0 then sprite 2 6
+color 6
+if z == 0 then sprite 1
+if z != 0 then sprite 2
 
 :: ( spr )
 
