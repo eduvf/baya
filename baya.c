@@ -39,8 +39,6 @@ char label[LABEL_MAX][TOKEN_LENGTH];
 uint8_t label_n = 0;
 uint16_t label_offset[LABEL_MAX];
 
-uint8_t sprites[16][4];
-uint8_t sprites_n = 0;
 uint8_t mem[(1 << 12)];
 uint16_t pc = 0;
 
@@ -93,6 +91,11 @@ typedef enum {
 } cmp_t;
 
 /* ENCODERS */
+
+void encode_write(uint8_t n) {
+  mem[pc++] = n;
+  return;
+}
 
 void encode_halt() {
   mem[pc++] = HALT;
@@ -276,6 +279,15 @@ void next_token() {
 
 /* STATEMENTS PARSER */
 
+void parse_write() {
+  uint8_t num;
+
+  next_token();
+  if (is_number(&num) != 0) error("invalid number");
+
+  encode_write(num);
+}
+
 void parse_assign() {
   reg_t reg_to;
   reg_t reg_from;
@@ -420,6 +432,7 @@ void parse_goto() {
   label_n++;
 }
 
+/*
 bool parse_sprite_data() {
   char ch;
   uint8_t spr[4] = {0};
@@ -436,6 +449,7 @@ bool parse_sprite_data() {
   sprites_n++;
   return true;
 }
+*/
 
 /* PROCESS BYTECODE */
 
@@ -464,13 +478,11 @@ void read_file(char *name) {
   file = fopen(name, "r");
   if (file == NULL) error("couldn't open file");
 
-  // ignore header
-  while (scan_token() != NULL)
-    if (strcmp(token, "::") == 0) break;
-
   // code section
   while (scan_token() != NULL) {
-    if (is_register())
+    if (strcmp(token, "write") == 0)
+      parse_write();
+    else if (is_register())
       parse_assign();
     else if (strcmp(token, "print") == 0)
       parse_print();
@@ -488,18 +500,12 @@ void read_file(char *name) {
       parse_label();
     else if (strcmp(token, "goto") == 0)
       parse_goto();
-    else if (strcmp(token, "::") == 0)
-      break;
     else
       error("invalid instruction");
   }
   encode_halt();
 
   resolve_gotos();
-
-  // process sprites
-  while (parse_sprite_data())
-    ;
 
   fclose(file);
 }
@@ -545,6 +551,7 @@ void assign_color() {
   pc += 2;
 }
 
+/*
 void draw_sprite() {
   uint8_t *spr = sprites[get_N()];
   Color col = PALETTE[regs[RCOL - 1]];
@@ -558,6 +565,7 @@ void draw_sprite() {
 
   pc += 2;
 }
+*/
 
 void assign_register_to_register() {
   op_t op = mem[pc++];
@@ -681,7 +689,7 @@ void exec() {
       assign_color();
       break;
     case SPRITE:
-      draw_sprite();
+      // draw_sprite();
       break;
     case REG_OP_REG:
       assign_register_to_register();
@@ -719,15 +727,10 @@ void exec() {
 int main(void) {
   read_file("game.baya");
 
-  /*
-  for (int i; i < pc; i += 4) {
-    printf("%x", memory[i]);
-    printf("%x", memory[i + 1]);
-    printf("%x", memory[i + 2]);
-    printf("%x ", memory[i + 3]);
+  for (int i = 0; i < pc; i++) {
+    printf("%x", mem[i]);
   }
   putchar('\n');
-  */
 
   SetTraceLogLevel(LOG_ERROR);
   InitWindow(SCREEN_WIDTH * scale, SCREEN_HEIGHT * scale, "🫐 baya");

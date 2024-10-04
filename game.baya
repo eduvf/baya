@@ -1,15 +1,31 @@
-baya
+goto main
 
-test file
+: ship
+write 0x18 ( 0b_0001_1000 )
+write 0xFF ( 0b_1111_1111 )
+write 0x18 ( 0b_0001_1000 )
+write 0x24 ( 0b_0010_0100 )
 
-:: ( code )
+: alien0
+write 0x3C ( 0b_0011_1100 )
+write 0x5A ( 0b_0101_1010 )
+write 0x3C ( 0b_0011_1100 )
+write 0x42 ( 0b_0100_0010 )
 
+: alien1
+write 0x3C ( 0b_0011_1100 )
+write 0x5A ( 0b_0101_1010 )
+write 0x3C ( 0b_0011_1100 )
+write 0x24 ( 0b_0010_0100 )
+
+: main
 clear 0
 
+(
 x = 0
 y = 0
 color 5
-sprite 0
+sprite ship
 
 z = t
 y = 2
@@ -25,22 +41,6 @@ key up then y += -1
 key down then y += 1
 
 color 6
-if z == 0 then sprite 1
-if z != 0 then sprite 2
-
-:: ( spr )
-
-..x.....
-xxxxx...
-..x.....
-.x.x....
-
-..xxxx..
-.x.xx.x.
-..xxxx..
-.x....x.
-
-..xxxx..
-.x.xx.x.
-..xxxx..
-..x..x..
+if z == 0 then sprite alien0
+if z != 0 then sprite alien1
+)
