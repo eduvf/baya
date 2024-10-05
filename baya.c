@@ -390,15 +390,23 @@ void parse_color() {
   encode_color(col);
 }
 
-void parse_sprite() {
+int next_token_label() {
   next_token();
   if (label_n == LABEL_MAX) error("too many labels");
 
-  for (int i = 0; i < label_n; i++) {
+  for (uint16_t i = 0; i < label_n; i++) {
     if (strcmp(token, label[i]) == 0) {
-      encode_sprite(i);
-      return;
+      return i;
     }
+  }
+  return -1;
+}
+
+void parse_sprite() {
+  int i;
+  if (0 <= (i = next_token_label())) {
+    encode_sprite(i);
+    return;
   }
 
   strcpy(label[label_n], token);
@@ -408,14 +416,10 @@ void parse_sprite() {
 }
 
 void parse_label() {
-  next_token();
-  if (label_n == LABEL_MAX) error("too many labels");
-
-  for (int i = 0; i < label_n; i++) {
-    if (strcmp(token, label[i]) == 0) {
-      label_offset[i] = pc;
-      return;
-    }
+  int i;
+  if (0 <= (i = next_token_label())) {
+    label_offset[i] = pc;
+    return;
   }
 
   strcpy(label[label_n], token);
@@ -424,14 +428,10 @@ void parse_label() {
 }
 
 void parse_goto() {
-  next_token();
-  if (label_n == LABEL_MAX) error("too many labels");
-
-  for (int i = 0; i < label_n; i++) {
-    if (strcmp(token, label[i]) == 0) {
-      encode_goto(i);
-      return;
-    }
+  int i;
+  if (0 <= (i = next_token_label())) {
+    encode_goto(i);
+    return;
   }
 
   strcpy(label[label_n], token);
