@@ -12,7 +12,7 @@
 
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
-#define TOKEN_LENGTH 16
+#define TOKEN_LENGTH 32
 #define LABEL_MAX 64
 
 #define PALETTE_SIZE 8
@@ -196,9 +196,44 @@ void error(const char *msg) {
   exit(1);
 }
 
-char is_number(uint8_t *n) {
-  *n = (char)strtol(token, NULL, 0);
-  return errno;
+bool is_number(uint8_t *n) {
+  int i = 0;
+  int ch = 0;
+  int dig = 0;
+  int num = 0;
+  int len = strlen(token);
+  int base = 10;
+  bool neg = false;
+
+  if (token[0] == '0' && token[1] == 'b') {
+    i = 2;
+    base = 2;
+  } else if (token[0] == '0' && token[1] == 'x') {
+    i = 2;
+    base = 16;
+  } else if (token[0] == '-') {
+    i = 1;
+    neg = true;
+  }
+
+  for (; i < len; i++) {
+    ch = token[i];
+    if (ch == '_') continue;
+
+    if (48 <= ch && ch <= 57)
+      // 0..9
+      dig = ch - 48;
+    else if (65 <= (ch & 0xdf) && (ch & 0xdf) <= 90) {
+      // a..z
+      dig = (ch & 0xdf) - 55;
+    } else {
+      return false;
+    }
+    num = num * base + dig;
+  }
+
+  *n = num * (neg ? -1 : 1);
+  return true;
 }
 
 reg_t is_register() {
@@ -284,7 +319,7 @@ void parse_write() {
   uint8_t num;
 
   next_token();
-  if (is_number(&num) != 0) error("invalid number");
+  if (!is_number(&num)) error("invalid number");
 
   encode_write(num);
 }
@@ -307,14 +342,14 @@ void parse_assign() {
 
   if (op == SET && strcmp(token, "random") == 0) {
     next_token();
-    if (is_number(&num) != 0) error("invalid number");
+    if (!is_number(&num)) error("invalid number");
 
     encode_reg_random(reg_to, num);
     return;
   }
 
   if (!(op == SET || op == ADD)) error("unexpected assignment operation");
-  if (is_number(&num) != 0) error("invalid number");
+  if (!is_number(&num)) error("invalid number");
 
   if (op == SET)
     encode_reg_set_lit(reg_to, num);
@@ -339,7 +374,7 @@ void parse_if() {
     encode_if_reg_cmp_reg(cmp, reg_lhs, reg_rhs);
   else {
     if (!(cmp == EQ || cmp == NE)) error("unexpected comparison operator");
-    if (is_number(&num) != 0) error("invalid number");
+    if (!is_number(&num)) error("invalid number");
 
     if (cmp == EQ)
       encode_if_reg_eq_lit(reg_lhs, num);
@@ -376,7 +411,7 @@ void parse_clear() {
   uint8_t col;
 
   next_token();
-  if (is_number(&col) != 0) error("expected literal color");
+  if (!is_number(&col)) error("expected literal color");
 
   encode_clear(col);
 }
@@ -385,7 +420,7 @@ void parse_color() {
   uint8_t col;
 
   next_token();
-  if (is_number(&col) != 0) error("expected literal color");
+  if (!is_number(&col)) error("expected literal color");
 
   encode_color(col);
 }

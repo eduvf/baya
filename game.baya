@@ -1,22 +1,22 @@
 goto main
 
 : ship
-write 0x18 ( 0b_0001_1000 )
-write 0xFF ( 0b_1111_1111 )
-write 0x18 ( 0b_0001_1000 )
-write 0x24 ( 0b_0010_0100 )
+write 0b_00011000 ( 0x18 )
+write 0b_11111111 ( 0xFF )
+write 0b_00011000 ( 0x18 )
+write 0b_00100100 ( 0x24 )
 
 : alien0
-write 0x3C ( 0b_0011_1100 )
-write 0x5A ( 0b_0101_1010 )
-write 0x3C ( 0b_0011_1100 )
-write 0x42 ( 0b_0100_0010 )
+write 0b_00111100 ( 0x3C )
+write 0b_01011010 ( 0x5A )
+write 0b_00111100 ( 0x3C )
+write 0b_01000010 ( 0x42 )
 
 : alien1
-write 0x3C ( 0b_0011_1100 )
-write 0x5A ( 0b_0101_1010 )
-write 0x3C ( 0b_0011_1100 )
-write 0x24 ( 0b_0010_0100 )
+write 0b_00111100 ( 0x3C )
+write 0b_01011010 ( 0x5A )
+write 0b_00111100 ( 0x3C )
+write 0b_00100100 ( 0x24 )
 
 : main
 clear 0
