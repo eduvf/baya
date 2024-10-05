@@ -58,7 +58,7 @@ typedef enum {
   PRINT,          // print x
   CLEAR,          // clear N
   COLOR,          // color N
-  SPRITE,         // sprite N (id)
+  SPRITE,         // sprite NNN
   REG_OP_REG,     // x o= y
   REG_SET_LIT,    // x = NN
   REG_ADD_LIT,    // x += NN
@@ -127,10 +127,11 @@ void encode_color(uint8_t col) {
   pc += 2;
 }
 
-void encode_sprite(uint8_t id) {
+void encode_sprite(uint16_t addr) {
   mem[pc++] = SPRITE;
-  mem[pc++] = id;
-  pc += 2;
+  mem[pc++] = (addr & 0xf00) >> 8;
+  mem[pc++] = (addr & 0xf0) >> 4;
+  mem[pc++] = (addr & 0xf);
 }
 
 void encode_reg_op_reg(op_t op, reg_t x, reg_t y) {
@@ -390,13 +391,20 @@ void parse_color() {
 }
 
 void parse_sprite() {
-  uint8_t id;
-  uint8_t col;
-
   next_token();
-  if (is_number(&id) != 0) error("expected sprite id");
+  if (label_n == LABEL_MAX) error("too many labels");
 
-  encode_sprite(id);
+  for (int i = 0; i < label_n; i++) {
+    if (strcmp(token, label[i]) == 0) {
+      encode_sprite(i);
+      return;
+    }
+  }
+
+  strcpy(label[label_n], token);
+  label_offset[label_n] = 0;
+  encode_sprite(label_n);
+  label_n++;
 }
 
 void parse_label() {
@@ -432,25 +440,6 @@ void parse_goto() {
   label_n++;
 }
 
-/*
-bool parse_sprite_data() {
-  char ch;
-  uint8_t spr[4] = {0};
-
-  for (size_t y = 0; y < 4; y++) {
-    if (scan_token() == NULL) return false;
-
-    for (size_t x = 0; x < 8; x++) {
-      ch = token[x];
-      if (ch == 'x') spr[y] |= 128 >> x;
-    }
-    sprites[sprites_n][y] = spr[y];
-  }
-  sprites_n++;
-  return true;
-}
-*/
-
 /* PROCESS BYTECODE */
 
 void resolve_gotos() {
@@ -458,7 +447,7 @@ void resolve_gotos() {
   uint16_t n;
 
   for (uint8_t i = 0; i < pc; i += 4) {
-    if (mem[i] == GOTO) {
+    if (mem[i] == GOTO || mem[i] == SPRITE) {
       a = mem[i + 1];
       b = mem[i + 2];
       c = mem[i + 3];
@@ -551,9 +540,8 @@ void assign_color() {
   pc += 2;
 }
 
-/*
 void draw_sprite() {
-  uint8_t *spr = sprites[get_N()];
+  uint8_t *spr = &mem[get_NNN()];
   Color col = PALETTE[regs[RCOL - 1]];
   uint8_t ox = regs[RX - 1];
   uint8_t oy = regs[RY - 1];
@@ -562,10 +550,7 @@ void draw_sprite() {
     for (size_t y = 0; y < 4; y++)
       if (spr[y] & (128 >> x))
         DrawRectangle((ox + x) * scale, (oy + y) * scale, scale, scale, col);
-
-  pc += 2;
 }
-*/
 
 void assign_register_to_register() {
   op_t op = mem[pc++];
@@ -689,7 +674,7 @@ void exec() {
       assign_color();
       break;
     case SPRITE:
-      // draw_sprite();
+      draw_sprite();
       break;
     case REG_OP_REG:
       assign_register_to_register();
