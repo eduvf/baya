@@ -40,6 +40,7 @@ uint16_t label_offset[LABEL_MAX];
 
 uint8_t mem[(1 << 12)];
 uint16_t pc = 0;
+uint16_t sp = (1 << 12) - 1;
 
 #define REGISTER_N 12
 uint8_t regs[REGISTER_N];
@@ -53,6 +54,7 @@ typedef enum { KACTION = 1, KUP, KDOWN, KLEFT, KRIGHT } keys_t;
 
 typedef enum {
   HALT = 1,
+  SAVE,           // save
   GOTO,           // goto NNN
   PRINT,          // print x
   CLEAR,          // clear N
@@ -98,6 +100,11 @@ void encode_write(uint8_t n) {
 
 void encode_halt() {
   mem[pc++] = HALT;
+  pc += 3;
+}
+
+void encode_save() {
+  mem[pc++] = SAVE;
   pc += 3;
 }
 
@@ -474,6 +481,11 @@ void parse_goto() {
   label_n++;
 }
 
+void parse_save() {
+  encode_save();
+  return;
+}
+
 /* PROCESS BYTECODE */
 
 void resolve_gotos() {
@@ -523,6 +535,8 @@ void read_file(char *name) {
       parse_label();
     else if (strcmp(token, "goto") == 0)
       parse_goto();
+    else if (strcmp(token, "save") == 0)
+      parse_save();
     else
       error("invalid instruction");
   }
@@ -584,6 +598,19 @@ void draw_sprite() {
     for (size_t y = 0; y < 4; y++)
       if (spr[y] & (128 >> x))
         DrawRectangle((ox + x) * scale, (oy + y) * scale, scale, scale, col);
+}
+
+void save_registers() {
+  // save registers x..z and a..f
+  mem[sp--] = regs[RX];
+  mem[sp--] = regs[RY];
+  mem[sp--] = regs[RZ];
+  mem[sp--] = regs[RA];
+  mem[sp--] = regs[RB];
+  mem[sp--] = regs[RC];
+  mem[sp--] = regs[RD];
+  mem[sp--] = regs[RE];
+  mem[sp--] = regs[RF];
 }
 
 void assign_register_to_register() {
@@ -695,6 +722,9 @@ void exec() {
     switch (o) {
     case HALT:
       return;
+    case SAVE:
+      save_registers();
+      break;
     case GOTO:
       pc = get_NNN();
       break;
