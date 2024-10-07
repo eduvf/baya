@@ -55,6 +55,7 @@ typedef enum { KACTION = 1, KUP, KDOWN, KLEFT, KRIGHT } keys_t;
 typedef enum {
   HALT = 1,
   SAVE,           // save
+  LOAD,           // load
   GOTO,           // goto NNN
   PRINT,          // print x
   CLEAR,          // clear N
@@ -105,6 +106,11 @@ void encode_halt() {
 
 void encode_save() {
   mem[pc++] = SAVE;
+  pc += 3;
+}
+
+void encode_load() {
+  mem[pc++] = LOAD;
   pc += 3;
 }
 
@@ -486,6 +492,11 @@ void parse_save() {
   return;
 }
 
+void parse_load() {
+  encode_load();
+  return;
+}
+
 /* PROCESS BYTECODE */
 
 void resolve_gotos() {
@@ -537,6 +548,8 @@ void read_file(char *name) {
       parse_goto();
     else if (strcmp(token, "save") == 0)
       parse_save();
+    else if (strcmp(token, "load") == 0)
+      parse_load();
     else
       error("invalid instruction");
   }
@@ -602,15 +615,30 @@ void draw_sprite() {
 
 void save_registers() {
   // save registers x..z and a..f
-  mem[sp--] = regs[RX];
-  mem[sp--] = regs[RY];
-  mem[sp--] = regs[RZ];
-  mem[sp--] = regs[RA];
-  mem[sp--] = regs[RB];
-  mem[sp--] = regs[RC];
-  mem[sp--] = regs[RD];
-  mem[sp--] = regs[RE];
-  mem[sp--] = regs[RF];
+  mem[sp--] = regs[RX - 1];
+  mem[sp--] = regs[RY - 1];
+  mem[sp--] = regs[RZ - 1];
+  mem[sp--] = regs[RA - 1];
+  mem[sp--] = regs[RB - 1];
+  mem[sp--] = regs[RC - 1];
+  mem[sp--] = regs[RD - 1];
+  mem[sp--] = regs[RE - 1];
+  mem[sp--] = regs[RF - 1];
+  pc += 3;
+}
+
+void load_registers() {
+  // load registers x..z and a..f
+  regs[RF - 1] = mem[++sp];
+  regs[RE - 1] = mem[++sp];
+  regs[RD - 1] = mem[++sp];
+  regs[RC - 1] = mem[++sp];
+  regs[RB - 1] = mem[++sp];
+  regs[RA - 1] = mem[++sp];
+  regs[RZ - 1] = mem[++sp];
+  regs[RY - 1] = mem[++sp];
+  regs[RX - 1] = mem[++sp];
+  pc += 3;
 }
 
 void assign_register_to_register() {
@@ -724,6 +752,9 @@ void exec() {
       return;
     case SAVE:
       save_registers();
+      break;
+    case LOAD:
+      load_registers();
       break;
     case GOTO:
       pc = get_NNN();
