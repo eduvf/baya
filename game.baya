@@ -18,21 +18,27 @@ write 0b_01011010 ( 0x5A )
 write 0b_00111100 ( 0x3C )
 write 0b_00100100 ( 0x24 )
 
+: init
+x = 8
+y = 8
+w = 1
+
 : main
+if w == 0 then goto init
+
 clear 0
 
+save
 x = 0
 y = 0
 color 5
 sprite ship
+load
 
-z = t
-y = 2
-z /= y
-z %= y
-
-x = 8
-y = 8
+a = t
+b = 2
+a /= b
+a %= b
 
 key left then x += -1
 key right then x += 1
@@ -40,5 +46,5 @@ key up then y += -1
 key down then y += 1
 
 color 6
-if z == 0 then sprite alien0
-if z != 0 then sprite alien1
+if a == 0 then sprite alien0
+if a != 0 then sprite alien1
