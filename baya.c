@@ -512,7 +512,7 @@ void resolve_gotos() {
   uint16_t n;
 
   for (uint8_t i = 0; i < pc; i += 4) {
-    if (mem[i] == GOTO || mem[i] == SPRITE) {
+    if (mem[i] == GOTO || mem[i] == POINT) {
       a = mem[i + 1];
       b = mem[i + 2];
       c = mem[i + 3];
