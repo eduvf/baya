@@ -41,6 +41,7 @@ uint16_t label_offset[LABEL_MAX];
 uint8_t mem[(1 << 12)];
 uint16_t pc = 0;
 uint16_t sp = (1 << 12) - 1;
+uint16_t ip = 0; // index pointer
 
 #define REGISTER_N 12
 uint8_t regs[REGISTER_N];
@@ -59,6 +60,7 @@ typedef enum {
   GOTO,           // goto NNN
   PRINT,          // print x
   CLEAR,          // clear N
+  POINT,          // point NNN
   SPRITE,         // sprite NNN
   REG_OP_REG,     // x o= y
   REG_SET_LIT,    // x = NN
@@ -115,6 +117,13 @@ void encode_load() {
 
 void encode_goto(uint16_t n) {
   mem[pc++] = GOTO;
+  mem[pc++] = (n & 0xf00) >> 8;
+  mem[pc++] = (n & 0xf0) >> 4;
+  mem[pc++] = (n & 0xf);
+}
+
+void encode_point(uint16_t n) {
+  mem[pc++] = POINT;
   mem[pc++] = (n & 0xf00) >> 8;
   mem[pc++] = (n & 0xf0) >> 4;
   mem[pc++] = (n & 0xf);
@@ -446,6 +455,19 @@ void parse_sprite() {
   label_n++;
 }
 
+void parse_point() {
+  int i;
+  if (0 <= (i = next_token_label())) {
+    encode_point(i);
+    return;
+  }
+
+  strcpy(label[label_n], token);
+  label_offset[label_n] = 0;
+  encode_point(label_n);
+  label_n++;
+}
+
 void parse_label() {
   int i;
   if (0 <= (i = next_token_label())) {
@@ -518,6 +540,8 @@ void read_file(char *name) {
       parse_print();
     else if (strcmp(token, "clear") == 0)
       parse_clear();
+    else if (strcmp(token, "point") == 0)
+      parse_point();
     else if (strcmp(token, "sprite") == 0)
       parse_sprite();
     else if (strcmp(token, "if") == 0)
@@ -734,6 +758,9 @@ void exec() {
       break;
     case GOTO:
       pc = get_NNN();
+      break;
+    case POINT:
+      ip = get_NNN();
       break;
     case PRINT:
       print_register();
