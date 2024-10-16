@@ -61,7 +61,7 @@ typedef enum {
   PRINT,          // print x
   CLEAR,          // clear N
   POINT,          // point NNN
-  SPRITE,         // sprite NNN
+  SPRITE,         // sprite x y col
   REG_OP_REG,     // x o= y
   REG_SET_LIT,    // x = NN
   REG_ADD_LIT,    // x += NN
@@ -141,11 +141,11 @@ void encode_clear(uint8_t n) {
   pc += 2;
 }
 
-void encode_sprite(uint16_t addr) {
+void encode_sprite(reg_t x, reg_t y, uint8_t col) {
   mem[pc++] = SPRITE;
-  mem[pc++] = (addr & 0xf00) >> 8;
-  mem[pc++] = (addr & 0xf0) >> 4;
-  mem[pc++] = (addr & 0xf);
+  mem[pc++] = x;
+  mem[pc++] = y;
+  mem[pc++] = col & (PALETTE_SIZE - 1);
 }
 
 void encode_reg_op_reg(op_t op, reg_t x, reg_t y) {
@@ -443,16 +443,18 @@ int next_token_label() {
 }
 
 void parse_sprite() {
-  int i;
-  if (0 <= (i = next_token_label())) {
-    encode_sprite(i);
-    return;
-  }
+  reg_t x;
+  reg_t y;
+  uint8_t col;
 
-  strcpy(label[label_n], token);
-  label_offset[label_n] = 0;
-  encode_sprite(label_n);
-  label_n++;
+  next_token();
+  if (!(x = is_register())) error("expected register in sprite");
+  next_token();
+  if (!(y = is_register())) error("expected register in sprite");
+  next_token();
+  if (!is_number(&col)) error("expected literal color");
+
+  encode_sprite(x, y, col);
 }
 
 void parse_point() {
@@ -601,16 +603,15 @@ void clear_screen() {
 }
 
 void draw_sprite() {
-  uint8_t *spr = &mem[get_NNN()];
-  // Color col = PALETTE[regs[RCOL - 1]];
-  uint8_t ox = regs[RX - 1];
-  uint8_t oy = regs[RY - 1];
+  uint8_t *spr = &mem[ip];
+  uint8_t ox = regs[get_reg()];
+  uint8_t oy = regs[get_reg()];
+  Color col = PALETTE[get_N()];
 
   for (size_t x = 0; x < 8; x++)
     for (size_t y = 0; y < 4; y++)
       if (spr[y] & (128 >> x))
-        DrawRectangle((ox + x) * scale, (oy + y) * scale, scale, scale, WHITE);
-  // DrawRectangle((ox + x) * scale, (oy + y) * scale, scale, scale, col);
+        DrawRectangle((ox + x) * scale, (oy + y) * scale, scale, scale, col);
 }
 
 void save_registers() {
