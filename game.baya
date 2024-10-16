@@ -1,5 +1,11 @@
 goto main
 
+: missile
+write 0b_00011000
+write 0b_00011000
+write 0
+write 0
+
 : ship
 write 0b_00011000 ( 0x18 )
 write 0b_11111111 ( 0xFF )
@@ -23,6 +29,9 @@ x = 28
 y = 26
 c = 2
 d = 2
+e = 255
+f = 255
+z = 0
 w = 1
 
 : main
@@ -44,3 +53,21 @@ key right then x += 1
 
 point ship
 sprite x y 5
+
+if z == 1 then goto update_missile
+key action then goto init_missile
+
+goto end : update_missile
+
+f += -1
+if f == 0 then z = 0
+point missile
+sprite e f 3
+
+goto end : init_missile
+
+e = x
+f = y
+z = 1
+
+: end
