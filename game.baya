@@ -21,6 +21,8 @@ write 0b_00100100 ( 0x24 )
 : init
 x = 28
 y = 26
+c = 2
+d = 2
 w = 1
 
 : main
@@ -28,22 +30,17 @@ if w == 0 then goto init
 
 clear 0
 
-save
-x = 2
-y = 2
-
 a = t
 b = 2
 a /= b
 a %= b
 
-color 6
-if a == 0 then sprite alien0
-if a != 0 then sprite alien1
-load
+if a == 0 then point alien0
+if a != 0 then point alien1
+sprite c d 6
 
 key left then x += -1
 key right then x += 1
 
-color 5
-sprite ship
+point ship
+sprite x y 5
