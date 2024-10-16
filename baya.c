@@ -48,7 +48,7 @@ uint8_t regs[REGISTER_N];
 /* ENUMS */
 /* starting at 1, because 0 represents an invalid token */
 
-typedef enum { RX = 1, RY, RZ, RW, RA, RB, RC, RD, RE, RF, RT, RCOL } reg_t;
+typedef enum { RX = 1, RY, RZ, RW, RA, RB, RC, RD, RE, RF, RT } reg_t;
 
 typedef enum { KACTION = 1, KUP, KDOWN, KLEFT, KRIGHT } keys_t;
 
@@ -59,7 +59,6 @@ typedef enum {
   GOTO,           // goto NNN
   PRINT,          // print x
   CLEAR,          // clear N
-  COLOR,          // color N
   SPRITE,         // sprite NNN
   REG_OP_REG,     // x o= y
   REG_SET_LIT,    // x = NN
@@ -130,12 +129,6 @@ void encode_print(reg_t r) {
 void encode_clear(uint8_t n) {
   mem[pc++] = CLEAR;
   mem[pc++] = n & (PALETTE_SIZE - 1);
-  pc += 2;
-}
-
-void encode_color(uint8_t col) {
-  mem[pc++] = COLOR;
-  mem[pc++] = col & (PALETTE_SIZE - 1);
   pc += 2;
 }
 
@@ -428,15 +421,6 @@ void parse_clear() {
   encode_clear(col);
 }
 
-void parse_color() {
-  uint8_t col;
-
-  next_token();
-  if (!is_number(&col)) error("expected literal color");
-
-  encode_color(col);
-}
-
 int next_token_label() {
   next_token();
   if (label_n == LABEL_MAX) error("too many labels");
@@ -534,8 +518,6 @@ void read_file(char *name) {
       parse_print();
     else if (strcmp(token, "clear") == 0)
       parse_clear();
-    else if (strcmp(token, "color") == 0)
-      parse_color();
     else if (strcmp(token, "sprite") == 0)
       parse_sprite();
     else if (strcmp(token, "if") == 0)
@@ -594,23 +576,17 @@ void clear_screen() {
   pc += 2;
 }
 
-void assign_color() {
-  uint8_t col = get_N();
-  regs[RCOL - 1] = col;
-
-  pc += 2;
-}
-
 void draw_sprite() {
   uint8_t *spr = &mem[get_NNN()];
-  Color col = PALETTE[regs[RCOL - 1]];
+  // Color col = PALETTE[regs[RCOL - 1]];
   uint8_t ox = regs[RX - 1];
   uint8_t oy = regs[RY - 1];
 
   for (size_t x = 0; x < 8; x++)
     for (size_t y = 0; y < 4; y++)
       if (spr[y] & (128 >> x))
-        DrawRectangle((ox + x) * scale, (oy + y) * scale, scale, scale, col);
+        DrawRectangle((ox + x) * scale, (oy + y) * scale, scale, scale, WHITE);
+  // DrawRectangle((ox + x) * scale, (oy + y) * scale, scale, scale, col);
 }
 
 void save_registers() {
@@ -764,9 +740,6 @@ void exec() {
       break;
     case CLEAR:
       clear_screen();
-      break;
-    case COLOR:
-      assign_color();
       break;
     case SPRITE:
       draw_sprite();
