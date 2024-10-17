@@ -74,6 +74,19 @@ if f == 0 then z = 0
 point missile
 sprite e f 3
 
+a = c
+b = d
+if e < a then goto end
+if f < b then goto end
+
+a += 6
+b += 4
+if e > a then goto end
+if f > b then goto end
+
+( win )
+goto init
+
 goto end : init_missile
 
 e = x
