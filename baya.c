@@ -511,7 +511,7 @@ void resolve_gotos() {
   uint8_t a, b, c;
   uint16_t n;
 
-  for (uint8_t i = 0; i < pc; i += 4) {
+  for (uint16_t i = 0; i < pc; i += 4) {
     if (mem[i] == GOTO || mem[i] == POINT) {
       a = mem[i + 1];
       b = mem[i + 2];
