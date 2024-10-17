@@ -32,7 +32,7 @@ d = 2
 e = 255
 f = 255
 z = 0
-w = 1
+if w == 0 then w = 1
 
 : main
 if w == 0 then goto init
@@ -46,12 +46,18 @@ a %= b
 
 if a == 0 then point alien0
 if a != 0 then point alien1
-sprite c d 6
+
+if w == 6 then w = 1
+if w == 1 then sprite c d 6
+if w == 2 then sprite c d 7
+if w == 3 then sprite c d 4
+if w == 4 then sprite c d 3
+if w == 5 then sprite c d 2
 
 a = d
 a %= b
-if a == 0 then c += 1
-if a == 1 then c += -1
+if a == 0 then c += w
+if a == 1 then c -= w
 
 a = 54
 if c > a then d += 1
@@ -69,8 +75,9 @@ key action then goto init_missile
 
 goto end : update_missile
 
-f += -1
-if f == 0 then z = 0
+f -= w
+a = 32
+if f > a then z = 0
 point missile
 sprite e f 3
 
@@ -85,6 +92,7 @@ if e > a then goto end
 if f > b then goto end
 
 ( win )
+w += 1
 goto init
 
 goto end : init_missile
