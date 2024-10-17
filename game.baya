@@ -48,6 +48,16 @@ if a == 0 then point alien0
 if a != 0 then point alien1
 sprite c d 6
 
+a = d
+a %= b
+if a == 0 then c += 1
+if a == 1 then c += -1
+
+a = 54
+if c > a then d += 1
+a = 2
+if c < a then d += 1
+
 key left then x += -1
 key right then x += 1
 
