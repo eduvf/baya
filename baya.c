@@ -46,6 +46,8 @@ uint16_t ip = 0; // index pointer
 #define REGISTER_N 12
 uint8_t regs[REGISTER_N];
 
+char alias[REGISTER_N][TOKEN_LENGTH];
+
 /* ENUMS */
 /* starting at 1, because 0 represents an invalid token */
 
@@ -265,6 +267,17 @@ reg_t is_register() {
   return 0;
 }
 
+reg_t is_register_or_alias() {
+  reg_t reg;
+
+  if ((reg = is_register())) return reg;
+
+  for (uint8_t i = 0; i < REGISTER_N; i++)
+    if (strcmp(token, alias[i]) == 0) return i + 1;
+
+  return 0;
+}
+
 keys_t is_key() {
   if (strcmp(token, "action") == 0) return KACTION;
   if (strcmp(token, "up") == 0) return KUP;
@@ -329,6 +342,16 @@ void next_token() {
 
 /* STATEMENTS PARSER */
 
+void parse_alias() {
+  reg_t reg;
+
+  next_token();
+  if (!(reg = is_register())) error("expected register in alias");
+
+  next_token();
+  strcpy(alias[reg - 1], token);
+}
+
 void parse_write() {
   uint8_t num;
 
@@ -344,12 +367,12 @@ void parse_assign() {
   op_t op;
   uint8_t num;
 
-  reg_to = is_register();
+  reg_to = is_register_or_alias();
   next_token();
   if (!(op = is_operator())) error("expected operator after register");
 
   next_token();
-  if ((reg_from = is_register())) {
+  if ((reg_from = is_register_or_alias())) {
     encode_reg_op_reg(op, reg_to, reg_from);
     return;
   }
@@ -378,13 +401,14 @@ void parse_if() {
   uint8_t num;
 
   next_token();
-  if (!(reg_lhs = is_register())) error("expected register in condition");
+  if (!(reg_lhs = is_register_or_alias()))
+    error("expected register in condition");
 
   next_token();
   if (!(cmp = is_compare())) error("expected comparison");
 
   next_token();
-  if ((reg_rhs = is_register()))
+  if ((reg_rhs = is_register_or_alias()))
     encode_if_reg_cmp_reg(cmp, reg_lhs, reg_rhs);
   else {
     if (!(cmp == EQ || cmp == NE)) error("unexpected comparison operator");
@@ -416,7 +440,7 @@ void parse_print() {
   reg_t reg;
 
   next_token();
-  if (!(reg = is_register())) error("expected register to print");
+  if (!(reg = is_register_or_alias())) error("expected register to print");
 
   encode_print(reg);
 }
@@ -448,9 +472,9 @@ void parse_sprite() {
   uint8_t col;
 
   next_token();
-  if (!(x = is_register())) error("expected register in sprite");
+  if (!(x = is_register_or_alias())) error("expected register in sprite");
   next_token();
-  if (!(y = is_register())) error("expected register in sprite");
+  if (!(y = is_register_or_alias())) error("expected register in sprite");
   next_token();
   if (!is_number(&col)) error("expected literal color");
 
@@ -536,7 +560,9 @@ void read_file(char *name) {
   while (scan_token() != NULL) {
     if (strcmp(token, "write") == 0)
       parse_write();
-    else if (is_register())
+    else if (strcmp(token, "alias") == 0)
+      parse_alias();
+    else if (is_register_or_alias())
       parse_assign();
     else if (strcmp(token, "print") == 0)
       parse_print();
